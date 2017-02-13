@@ -1,0 +1,6 @@
+;$Id:$
+name = "DAE Data Repository"
+description = "This module allows users to interact with the data repository"
+core = 6.x
+package = DAE Modules
+dependencies[] = daedatabase

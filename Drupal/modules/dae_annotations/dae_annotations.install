@@ -1,0 +1,65 @@
+<?php
+
+function dae_annotations_schema(){
+  $schema['annotation_ui_storage'] = array(
+    'description' => 'Stores custom annotation interfaces',
+    'fields' => array(
+      'annotation_id' => array(
+        'description' => 'unique id',
+        'type' => 'serial',
+        'not null' => TRUE
+      ),
+      'annotation_name' => array(
+        'description' => 'annotation name',
+        'type' => 'varchar',
+        'length' => '50',
+        'not null' => TRUE
+      ),
+      'user_query' => array(
+        'description' => 'query for the dataitems that this constraint applies to',
+        'type' => 'blob',
+        'not null' => true
+      ),
+      'creator' => array(
+        'description' => 'the uid of the user who created',
+        'type' => 'int',
+        'not null' => TRUE
+      ),
+      'edited' => array(
+        'description' => 'the id of the user last edited',
+        'type' => 'varchar',
+        'length' => '15',
+        'not null' => TRUE
+      ),
+      'created' => array(
+        'description' => 'time of creation',
+        'type' => 'varchar',
+        'length' => '15',
+        'not null' => TRUE
+      ),
+      'specification' => array(
+        'description' => 'the xml spec for the interface',
+        'type' => 'blob',
+        'not null' => TRUE
+      ),
+      'active' => array(
+        'description' => 'if the ui should be made public',
+        'type' => 'int',
+        'deafult' => 0,
+        'not null' => TRUE
+      ),
+    ),
+    'primary key' => array('annotation_id')
+  );
+  return $schema;
+}
+
+function dae_annotations_install(){
+  drupal_install_schema('dae_annotations');
+}
+
+function dae_annotations_uninstall(){
+	drupal_uninstall_schema('dae_annotations');
+}
+
+?>

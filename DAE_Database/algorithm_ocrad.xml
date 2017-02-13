@@ -1,0 +1,29 @@
+<metadata>
+
+<!--This algorithm is the OCRAD OCR algorithm.-->
+<algorithm>
+<name>test ocrad</name>
+<version>0.19</version>
+<path>ocrad</path>
+<description>This is an OCR algorithm. It takes pnm image as input and produce layout information and ocr results.</description>
+<time_complexity>N/A</time_complexity>
+<space_complexity>N/A</space_complexity>
+
+<algorithm_input>
+<data_id>121</data_id>
+</algorithm_input>
+
+<algorithm_output>
+<data_id>122</data_id>
+</algorithm_output>
+
+<algorithm_output>
+<data_id>123</data_id>
+</algorithm_output>
+
+<defines_algorithm>
+<person_id>des308@lehigh.edu</person_id>
+</defines_algorithm>
+</algorithm>
+
+</metadata>

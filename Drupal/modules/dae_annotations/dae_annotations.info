@@ -1,0 +1,7 @@
+;$Id:$
+name = "DAE Annotation Tasks"
+description = "This module allows users to create customized annotation tasks"
+core = 6.x
+package = DAE Modules
+dependencies[] = daedatabase
+dependencies[] = image_crop

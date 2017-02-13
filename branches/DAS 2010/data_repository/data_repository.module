@@ -1,0 +1,33 @@
+<?php
+// $Id:$
+
+/**
+ * @file data_repository.module
+ * @author Bart Lamiroy
+ *
+ * The data repository module allows users to interact with the database.
+ */
+
+function data_repository_menu() 
+{
+  $items = array();
+
+	$items['Repository'] = array (
+	'title' => 'Repository',
+	'description' => 'Available Data',
+    'page callback' => 'data_repository_query',
+    'file' => 'data_repository.inc',
+	'access arguments' => array('view public data'),
+	);
+	$items['Repository/SQL'] = array (
+	'title' => 'Query Run',
+	'description' => 'Execute Query',
+    'page callback' => 'data_repository_display',
+    'file' => 'data_repository.inc',
+	'access arguments' => array('raw DAE database access'),
+	'type' => 'MENU_CALLBACK'
+	);
+
+    return $items;
+}
+

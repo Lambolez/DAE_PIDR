@@ -1,0 +1,100 @@
+<?php
+// $Id:$
+
+/**
+ * @file data_repository.module
+ * 
+ * @author  Bart Lamiroy <lamiroy@cse.lehigh.edu>
+ * 
+ * @version 1.0
+ *
+ * \brief The data repository module allows users to interact with the database using raw SQL.
+ *
+ * This module creates a Drupal form that allows any kind of SQL query to be typed in and sent 
+ * to the backend database server, as defined by the Drupal configuration variables in in daedatabase.module.
+ *
+ * @section LICENSE
+ * 
+ *  This file is part of the DAE Platform Project (DAE).
+ *
+ *  DAE is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  DAE is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with DAE.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+ 
+/**
+* \brief Default Drupal menu hook function
+*
+* This function declares the Drupal menu names and hierarchy, as well as the associated callback functions.
+*
+* The call back functions used in this module are:
+*  - data_repository_query() for the Repository menu, 
+*  - data_repository_display() for the Repository/SQL sub-menu. 
+*
+* @returns Drupal menu declaration array structure
+*/
+function data_repository_menu() 
+{
+  $items = array();
+
+	$items['Repository'] = array (
+	'title' => 'Repository',
+	'description' => 'Available Data',
+    'page callback' => 'data_repository_query',
+    'file' => 'data_repository.inc',
+	'access arguments' => array('view public data'),
+	);
+	$items['Repository/SQL'] = array (
+	'title' => 'Query Run',
+	'description' => 'Execute Query',
+    'page callback' => 'data_repository_display',
+    'file' => 'data_repository.inc',
+	'access arguments' => array('view public data'),
+	'type' => 'MENU_CALLBACK'
+	);
+	$items['Repository/query'] = array (
+	'title' => 'Query URL',
+	'description' => 'Execute Query',
+    'page callback' => 'data_repository_queryurl',
+    'file' => 'data_repository.inc',
+	'access arguments' => array('browse data'),
+	'type' => 'MENU_CALLBACK'
+	);
+	$items['Repository/getPID'] = array (
+			'title' => 'Query URL',
+			'description' => 'Execute Query',
+			'page callback' => 'data_repository_getPID',
+			'file' => 'data_repository.inc',
+			'access arguments' => array('browse data'),
+			'type' => 'MENU_CALLBACK'
+	);
+	
+	$items['Repository/client'] = array (
+	'title' => 'Repository Service Client',
+	'description' => 'Repository Service Client',
+    'page callback' => 'data_repository_service_client',
+    'file' => 'data_repository_service_client.inc',
+	'access arguments' => array('raw read-only DAE database access'),
+	'type' => 'MENU_CALLBACK'
+	);
+	$items['Repository/client_page'] = array (
+	'title' => 'Repository Service Client Form',
+	'description' => 'Repository Service Client Form Page',
+    'page callback' => 'data_repository_service_client_form_page',
+    'file' => 'data_repository_service_client.inc',
+	'access arguments' => array('browse data'),
+	);
+	
+    return $items;
+}
+

@@ -1,0 +1,42 @@
+<?php
+
+class ImageCropUI {
+  
+  function __construct($imageUrl, $opt_tools = false) {
+    
+    $this->image = $imageUrl;
+    $this->tools = array();
+    
+    if($opt_tools) $this->setTools($opt_tools);
+    
+    drupal_add_css(drupal_get_path('module', 'image_crop').'/image_crop.css');
+    drupal_add_js(drupal_get_path('module', 'image_crop').'/image_crop.js');
+    drupal_add_js(drupal_get_path('module','dae_ui').
+      "/javascript/jquery.Jcrop.min.js");
+    
+  }
+  
+  function setTools($newTools) {
+    $this->tools = $newTools;
+  }
+  
+  function addTool($newTool) {
+    array_push($this->tools, $newTool);
+  }
+  
+  function build() {
+    $imagesize = getimagesize($this->image);
+    $js = 'newImageCrop({
+        image : "'. $this->image. '",
+        wrapper : "image-crop-wrapper",
+        truesize : ['.$imagesize[0].','.$imagesize[1].'],
+        tools : '.json_encode($this->tools).'
+      })';
+    
+    drupal_add_js($js,'inline');
+  }
+  
+}
+
+
+?>

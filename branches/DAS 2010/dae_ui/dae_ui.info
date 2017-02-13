@@ -1,0 +1,5 @@
+;$Id:$
+name = "DAE UI"
+description = "This module contains the UI class for the DAE website"
+core = 6.x
+package = DAE Modules

@@ -1,0 +1,550 @@
+<?php
+// $Id:$
+
+/**
+ * @file algorithms.module
+ * 
+ * @author  Mike Kot <mdk312@lehigh.edu>
+ * 
+ * @version 1.0
+ *
+ * \brief The algorithms module allows users to view and run algorithms.
+ * 
+ * This module is soon to be completely rewritten. 
+ * It is currently based on the fact that algorithms are hosted and executed on a specific server.
+ * This assumption does not hold anymore since the projects architecture has evolved to a web-service 
+ * oriented paradigm.
+ * 
+ * Although still operational, this module is to be considered as obsolete.
+ *  
+ * @section LICENSE
+ * 
+ *  This file is part of the DAE Platform Project (DAE).
+ *
+ *  DAE is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  DAE is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with DAE.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
+require_once(drupal_get_path("module","home_directory")."/home_directory_uploads.var"); //keep path in one place
+require_once("./".drupal_get_path('module','daedatabase')."/daedatabase_db.inc");
+	//used to count the number of time algo_fill functions are called: useful to created unique node names.
+	static $index=0;
+
+/**
+ * Implements hook_menu().
+ */
+function algorithms_menu() 
+{
+  $items = array();
+
+	$items['algorithms'] = array (
+	'title' => 'Algorithms',
+	'description' => 'Available Algorithms',
+    'page callback' => 'algorithms_list',
+    'file' => 'algorithms_run.inc',
+	'access arguments' => array('view public algorithms'),
+	);
+	$items['runs'] = array(
+	'title' => 'My Runs',
+	'page callback' => 'algorithms_my_runs',
+	'file' => 'algorithms_my_runs.inc',
+	'access arguments' => array('run algorithms'),
+	);
+	$items['run'] = array (
+	'title' => 'Run',
+	'description' => 'Run chosen Algorithm',
+    'page callback' => 'algorithms_run',
+    'file' => 'algorithms_run.inc',
+	'access arguments' => array('run algorithms'),
+	'type' => 'MENU_CALLBACK'
+	);
+	$items['run/go'] = array (
+	'title' => 'Running',
+	'description' => 'Running',
+    'page callback' => 'algorithms_run_go',
+    'file' => 'algorithms_run.inc',
+	'access arguments' => array('run algorithms'),
+	'type' => 'MENU_CALLBACK'
+	);
+	$items['run/copy'] = array (
+	'title' => 'Copying',
+	'description' => 'Copying',
+    'page callback' => 'algorithms_copy_run',
+    'file' => 'algorithms_copy.inc',
+	'access arguments' => array('run algorithms'),
+	'type' => 'MENU_CALLBACK'
+	);
+	$items['run/delete'] = array (
+	'title' => 'Deleting',
+	'description' => 'Deleting',
+    'page callback' => 'algorithms_delete_run',
+    'file' => 'algorithms_delete.inc',
+	'access arguments' => array('run algorithms'),
+	'type' => 'MENU_CALLBACK'
+	);
+	$items['admin/settings/algorithms'] = array (
+	'title' => 'DAE Algorithm Settings',
+	'description' => 'Configure Algorithm settings.',
+    'access arguments' => array('administer site configuration'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('algorithms_admin'),
+    'file' => 'algorithms.admin.inc',
+	);
+	$items['run/info'] = array(
+	'title' => 'Run Info',
+	'page callback' => 'algorithms_get_run_info',
+	'file' => 'algorithms_my_runs.inc',
+	'access arguments' => array('access runs'),
+	'type' => 'MENU_CALLBACK'
+	);
+	$items['algorithms/modify'] = array (
+	'title' => 'Modify Algorithms',
+	'description' => 'Add/Upgrade Algorithms',
+    'page callback' => 'modify_algorithm_ui',
+    'file' => 'algorithms_modify.inc',
+	'access arguments' => array('declare algorithms'),
+	);
+	$items['algorithm/modify_form'] = array (
+	'title' => 'Modify Algorithms',
+	'description' => 'Add/Upgrade Algorithms',
+    'page callback' => 'modify_form',
+    'file' => 'algorithms_modify.inc',
+	'access arguments' => array('declare algorithms'),
+	'type' => 'MENU_CALLBACK'
+	);
+	$items['algorithm/choose_type'] = array (
+	'title' => 'Choose Data Type for Algorithm Modification',
+	'description' => 'Choose Data Type for Algorithm Modification',
+    'page callback' => 'choose_type',
+    'file' => 'algorithms_modify.inc',
+	'access arguments' => array('declare algorithms'),
+	'type' => 'MENU_CALLBACK'
+	);
+	$items['algorithm/save_type'] = array (
+	'title' => 'Save Data Type for Algorithm Modification',
+	'description' => 'Save Data Type for Algorithm Modification',
+    'page callback' => 'save_type',
+    'file' => 'algorithms_modify.inc',
+	'access arguments' => array('declare datatypes'),
+	'type' => 'MENU_CALLBACK'
+	);
+	$items['algorithm/submit_modification'] = array (
+	'title' => 'Submit Algorithm Modification',
+	'description' => 'Submit Algorithm Modification',
+    'page callback' => 'submit_page',
+    'file' => 'algorithms_modify.inc',
+	'access arguments' => array('declare algorithms'),
+	'type' => 'MENU_CALLBACK'
+	);
+	
+    return $items;
+}
+
+/**
+ * Implements hook_perm().
+ */
+function algorithms_perm()
+{
+	return array('view public algorithms', 'run algorithms','view all algorithms', 'unlimited runs', 'dae experimental','declare algorithms');
+}
+
+/**
+ * \brief Builds a list of algorithms in the DAE database
+ * 
+ * This function requires the DAE db
+ * 
+ * Unauthenticated users are allowed to view the list
+ * 
+ */
+function algorithms_list()
+{
+	global $base_url;
+	global $index;
+	$db = getDAEDatabase();
+	
+	drupal_add_js(drupal_get_path("module","dae_ui")."/javascript/algorithms_list.js");
+	drupal_add_css(drupal_get_path("module","dae_ui")."/stylesheets/algorithms.css");
+	
+	/*
+	 * The following queries will only report the algorithms that have been effecively
+	 * (and successfully run) on the system.
+	 * Algorithms that are available, but have no track record of execution will
+	 * not appear.
+	 */
+	if(user_access('view all algorithms'))
+		$algoResultSet = $db->q("select algorithm.name, algorithm.id, algorithm.version, algorithm.description, 
+				count(algorithm_run.id) Total_Number, 
+				TO_CHAR(RATIO_TO_REPORT(count(algorithm_run.id)) OVER (),'9.9999') Ratio 
+			from algorithm_run_of 
+			join algorithm_run on algorithm_run.id = algorithm_run_of.algorithm_run_id 
+			join algorithm on algorithm.id = algorithm_run_of.algorithm_id 
+			where algorithm_run.status = 1 
+			and not algorithm.path is null 
+			group by algorithm.name, algorithm.id, algorithm.version, algorithm.description 
+			order by ratio desc",array());
+	else
+		$algoResultSet = $db->q("select algorithm.name, algorithm.id, algorithm.version, algorithm.description, 
+				count(algorithm_run.id) Total_Number, 
+				TO_CHAR(RATIO_TO_REPORT(count(algorithm_run.id)) OVER (),'9.9999') Ratio 
+			from algorithm_run_of 
+			join algorithm_run on algorithm_run.id = algorithm_run_of.algorithm_run_id 
+			join algorithm on algorithm.id = algorithm_run_of.algorithm_id 
+			where algorithm_run.status = 1 
+			and not algorithm.path is null 
+			group by algorithm.name, algorithm.id, algorithm.version, algorithm.description 
+			order by ratio desc",array()); //ADD where clause for public checkbox
+
+
+	$output = '<p>Running algorithms is currently only available through web services as described <a href="http://sourceforge.net/apps/mediawiki/daeplatform/index.php?title=Web_Service_Tutorial">here</a>.</p>';
+	$output .= '<p>WSDL interfaces of the algorithms listed here can be obtained from <a href="' . $base_url . '/services/soap">here</a>';
+	$output .= ' and <a href="' . $base_url . '/services/soap?wsdl">here</a>.</p>';
+	$output .= "<ul id=\"hd-algorithms\">";
+
+		
+	while($row = $db->fetch_array($algoResultSet,DATABASE_BOTH)):
+	
+	/*
+	 * Commented out code allowing to run algorithms from the web site until code can be changed to run by invoking web services 
+	 * (ancient code below)
+		$output .= "<li><strong>" . (user_access('run algorithms')?l($row['NAME'],"run/".$row['ID']):$row['NAME']) . "</strong> - <a href=\"#\" onClick=\"show_desc('#al_".$row['ID']."')\">Version " . $row['VERSION'] ."</a>";
+	*/
+	$index++;
+       // Encode json:
+    	$json = json_encode(algorithms_get_database_run_graph_alg($row['NAME'],$row['VERSION']));
+    	$json = str_replace(' ','_', $json );
+    	$json = trim($json, '[');
+    	$json =trim($json, ']');
+    
+		$output .= '<li><strong><a name="algo_' . $row['ID'] . '">' . $row['NAME'] . "</strong></a> - <a href=\"#\" onClick=\"show_desc('#al_".$row['ID']."')\">Version " . $row['VERSION'] ."</a>";
+        
+		$output .= "<div id=\"al_".$row['ID']."\" class=\"algorithm_description\">";
+		
+        $output .= 'Successful Executions: <strong>' . 	$row['TOTAL_NUMBER']. "</strong><br/>";
+        $output .= 'Ratio of executions: <strong> (wrt to other algorithms)' . 	$row['RATIO']. "</strong><br/>";
+		$output .= $row['DESCRIPTION'] . "<br/>";
+		
+		$output .= '<dl>';
+		$output .= '<dt><p><strong>Input Parameters</strong></dt>';
+
+		$algoInputSet = $db->q("select algo.name, datatype.name TNAME, data.description, data.ordering 
+			from algorithm algo 
+			join algorithm_input ai on algo.id =  ai.algorithm_id 
+			join data on data.id = ai.data_id 
+			join type_of on type_of.data_id = data.id 
+			join datatype on datatype.id = type_of.datatype_id
+			where algo.id = :idAlgo order by data.ordering",array(':idAlgo' => $row['ID']));
+		
+		$output .= '<dd>';
+		$output .= '<dl>';
+		
+		while($inputRow = $db->fetch_array($algoInputSet,DATABASE_BOTH)):
+			$output .= "<dt>Argument " . $inputRow['ORDERING'] . ' (' . $inputRow['TNAME']. ")</dt>";
+			$output .= "<dd>" . $inputRow['DESCRIPTION']."</dd>";
+		endwhile;
+		
+		$output .= '</dl>';
+		$output .= '</dd>';
+		
+		$output .= '<dt><p><strong>Output Parameters</strong></dt>';
+
+		$algoOutputSet = $db->q("select algo.name, datatype.name TNAME, data.description, data.ordering 
+			from algorithm algo 
+			join algorithm_output ao on algo.id =  ao.algorithm_id 
+			join data on data.id = ao.data_id 
+			join type_of on type_of.data_id = data.id 
+			join datatype on datatype.id = type_of.datatype_id
+			where algo.id = :idAlgo order by data.ordering",array(':idAlgo' => $row['ID']));
+		
+		$output .= '<dd>';
+		$output .= '<dl>';
+		
+		while($outputRow = $db->fetch_array($algoOutputSet,DATABASE_BOTH)):
+			$output .= "<dt>Argument " . $outputRow['ORDERING'] . ' (' . $outputRow['TNAME']. ")</dt>";
+			$output .= "<dd>" . $outputRow['DESCRIPTION']."</dd>";
+		endwhile;
+		
+		$output .= '</dl>';
+		$output .= '</dd>';
+		
+		$output .= '</dl>';
+        
+		$name_algo = str_replace(' ','_', $row['NAME'] );
+      		$name_algo .= $index;
+		
+		$output .= "</div><div id=\"infovis".$name_algo ."\" class=\"infovis\">
+                                    			                        <a class=\"infovis_anchor_bis\" href=javascript:init('infovis".$name_algo."','".htmlspecialchars($json)."')>graph</a>
+
+           </div> </li>
+        
+       
+          
+           
+           
+                
+      ";
+	
+	endwhile;
+	/* <div id=\"infovis".$row['NAME']."\" class=\"infovis\">
+                                    			                        <a class=\"infovis_anchor_bis\"  style=\"display:none;\" href=javascript:init('infovis".$row['NAME']."','".htmlspecialchars($json)."')>graph</a>
+
+           </div>*/
+	$output .= "</ul><div id=\"log\"></div>";
+	
+	return $output;
+
+} 
+/**
+ * \brief Confirms that the run ID in the URL is only a number
+ * 
+ * Sets a security message in case the run ID was an attempt at SQL injection
+ * 
+ * @param $run the run id.
+ */
+function algorithms_valid_run($run)
+{
+	if(is_numeric($run)):
+		return true;
+	else:
+		watchdog("Security",t("A user attempted to use \"!data\" as a run ID",array("!data" => $run)),array(), WATCHDOG_WARNING);
+		drupal_set_message("Invalid run ID.","warning");
+		return false;
+	endif;
+}
+
+function algorithms_get_database_run_graph_alg($name,$version)
+{     
+     
+    $data= array();
+    
+    //Create the basic array of the execution graph
+    $data=algorithms_fill_array_tree_right_alg($data,$name,null,$name,$version);
+    $data=algorithms_fill_array_tree_left_alg($data,$name,null,$name,$version);
+
+    
+    
+   
+   /*Below is an example of the kind of array created. The rest of the fonction transform this array in an array representing the
+   same graph, but unsing nested arrays to represent children-parent relationship, as in the JSON format.
+   
+   $data = array(
+    array('id' => "1$run", 'parent_id' => null, 'name' => 'lorem ipsum'),
+    array('id' => "2$run", 'parent_id' => "1$run", 'name' => 'lorem ipsum1'),
+    array('id' => "3$run", 'parent_id' => "1$run", 'name' => 'lorem ipsum2'),
+    array('id' => "4$run", 'parent_id' => "2$run", 'name' => 'lorem ipsum3'),
+    array('id' => "5$run", 'parent_id' => "3$run", 'name' => 'lorem ipsum4'),
+    );*/
+
+
+$itemsByReference = array();
+
+// Build array of item references:
+foreach($data as $key => &$item) {
+   $itemsByReference[$item['id']] = &$item;
+   // Empty data class (so that json_encode adds "data: {}" ) 
+   $itemsByReference[$item['id']]['data'] = new StdClass();
+   // Children array:
+   $itemsByReference[$item['id']]['children'] = array();
+   
+}
+
+// Set items as children of the relevant parent item.
+foreach($data as $key => &$item)
+   if($item['parent_id'] && isset($itemsByReference[$item['parent_id']]))
+      $itemsByReference [$item['parent_id']]['children'][] = &$item;
+
+// Remove items that were added to parents elsewhere:
+foreach($data as $key => &$item) {
+   if($item['parent_id'] && isset($itemsByReference[$item['parent_id']]))
+      unset($data[$key]);
+}
+
+
+
+return $data;
+}
+
+//This function adds all the nodes corresponding to executions realised after the root execution, including the root node.
+
+function algorithms_fill_array_tree_right_alg($array,$name,$parent,$rootname,$version)
+    {  
+	global $index;
+	
+        //variable used to choose the name of nodes in the recursive fonctions 
+        static $depth = 0;
+
+	
+        $db = getDAEDatabase();
+	
+  
+                // request for children nodes
+       $input = $db->q(
+            'SELECT distinct alg2.name,alg2.version
+
+            FROM algorithm_run arun   
+
+           join algorithm_run_of arof on
+           arof.algorithm_run_id = arun.id
+
+           join algorithm alg on
+           alg.id = arof.algorithm_id
+
+           join algorithm_run_output arout on
+           arout.algorithm_run_id = arun.id
+    
+           join data_item dit_out on
+           dit_out.id = arout.data_item_id
+ 
+
+           join algorithm_run_input arin on
+           arin.data_item_id = dit_out.id
+  
+           join algorithm_run arun2 on
+           arun2.id = arin.algorithm_run_id
+
+            join algorithm_run_of arof2 on
+           arof2.algorithm_run_id = arun2.id
+
+           join algorithm alg2 on
+           alg2.id = arof2.algorithm_id
+           
+           where alg.name=\''.$name.'\''.'and alg.version=\''.$version.'\'',array());
+                 
+            if($depth== 0){
+                //case of root node
+            	$array[]=array('id' => $name.$version."$index", 'parent_id' => null, 'name' => $name);
+                $rootname=$name.$version;
+		$rootname.=$index;
+		
+		 
+
+      }
+      else{
+                        $array[]=array('id' => $rootname, 'parent_id' => $parent, 'name' => $name); 
+                      
+      }
+        // naming convention: "nameroot => namenext => namenext" It guaranties unicity of the id among all nodes that coud ever be created
+
+      
+      if($depth<4){
+while($row = $db->fetch_array($input)){
+      $depth=$depth+1;
+      $idparent=$rootname;
+      
+      $rootname="$rootname=>".$row['NAME'];
+      $array=algorithms_fill_array_tree_right_alg($array,$row['NAME'],$idparent,$rootname,$row['VERSION']);
+      $depth=$depth-1;
+       } 
+}    
+else { 
+
+}  
+
+if($depth==0){
+//suppressing the static variable once it's no longer called recursively
+$depth=null;
+unset($depth);
+} 
+       
+       return $array;
+}
+
+
+
+function algorithms_fill_array_tree_left_alg($array,$name,$parent,$rootname,$version)
+    {
+	global $index;
+	
+        //variable used to choose the name of nodes in the recursive fonctions 
+
+        static $depth = 0;
+
+	
+        $db = getDAEDatabase();
+	
+        
+
+            // request for children node
+            $input = $db->q(
+            'SELECT distinct alg2.name,alg2.version
+
+            FROM algorithm_run arun   
+
+           join algorithm_run_of arof on
+           arof.algorithm_run_id = arun.id
+
+           join algorithm alg on
+           alg.id = arof.algorithm_id
+           
+           
+           join algorithm_run_input arin on
+            arin.algorithm_run_id = arun.id
+
+    
+           join data_item dit_in on
+           arin.data_item_id = dit_in.id
+
+            join algorithm_run_output arout on
+           arout.data_item_id = dit_in.id
+
+  
+           join algorithm_run arun2 on
+           arun2.id = arout.algorithm_run_id
+
+            join algorithm_run_of arof2 on
+           arof2.algorithm_run_id = arun2.id
+
+           join algorithm alg2 on
+           alg2.id = arof2.algorithm_id
+
+    where alg.name=\''.$name.'\''.'and alg.version=\''.$version.'\'',array());
+    
+
+           
+
+            
+            if($depth==0){
+   $rootname=$name.$version."$index";
+
+      }
+      else{
+                      $array[]=array('id' => $rootname, 'parent_id' => $parent, 'name' => $name);
+
+      }
+
+            if($depth<4){
+
+while($row= $db->fetch_array($input)){
+      $depth=$depth+1;
+     $idparent=$rootname;
+      
+        $rootname=$row['NAME']."<=$rootname";
+
+      $array=algorithms_fill_array_tree_left_alg($array,$row['NAME'],$idparent,$rootname,$row['VERSION']);
+      $depth=$depth-1;
+       } 
+} else { 
+
+}
+if($depth==0){
+//suppressing the static variable once it's no longer called recursively
+$depth=null;
+unset($depth);
+} 
+       
+       return $array;
+}
+
+
+
+

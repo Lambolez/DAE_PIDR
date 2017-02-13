@@ -1,0 +1,32 @@
+<?php
+// $Id$ 
+/**
+ * A module to draw dynamic graphs.
+ */
+
+/**
+ *Implementation of hook_help(). 
+*/
+
+ function dae_graph_help($path, $args) { 
+  if ($path == 'admin/help#dae_graph') {
+     return t('A module to draw dynamic graphs.'); 
+  } 
+} 
+
+/** 
+* Implementation of hook_init(). 
+*/
+
+ function dae_graph_init() { 
+  $path = drupal_get_path('module','dae_graph'); 
+  drupal_add_css($path . '/Spacetree.css');
+  $info = drupal_parse_info_file($path . '/dae_graph.info');
+  foreach ($info['scripts'] as $script) { 
+    drupal_add_js($path.'/'.$script);
+    
+  } 
+  
+
+
+} 

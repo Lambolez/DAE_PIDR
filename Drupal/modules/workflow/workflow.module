@@ -1,0 +1,57 @@
+<?php
+// $Id:$
+
+/**
+ * @file
+ * 
+ * @author  Qihan Long <qil212@.lehigh.edu>
+ * 
+ * @version 0.1
+ *
+ * \brief The workflow module is 
+ * 
+ * It consists of 3 files:
+ *  - workflow.info (containing the module declaration for Drupal)
+ *  - workflow.module (containing a simple menu callback declaration)
+ *  - workflow.inc (the actual menu callback function)
+ * 
+ * @section LICENSE
+ * 
+ *  This file is part of the DAE Platform Project (DAE). 
+ *  It can be downloaded from http://sourceforge.net/projects/daeplatform/
+ *
+ *  DAE is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  DAE is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with DAE.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+  
+
+/**
+ * Implementation of hook_menu().
+ * 
+ * \brief This function defines the Drupal 'menus' (i.e. the pages http://hostname/?q=menuname)
+ * by this module, and how and where the corresponding callback handlers are located
+ * 
+ */
+function workflow_menu() 
+{
+  $items = array();
+
+	$items['workflow'] = array(
+	'title' => 'Workflow',
+	'page callback' => 'workflow_generation',
+	'file' => 'workflow.inc',
+	'access arguments' => array('access content'),
+	);
+    return $items;
+}

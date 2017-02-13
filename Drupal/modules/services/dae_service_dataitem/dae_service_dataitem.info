@@ -1,0 +1,11 @@
+; $Id:$
+name = Data Item Service
+description = Provides a access to data_items as a service.
+package = DAE Services
+dependencies[] = services
+dependencies[] = soap_server
+dependencies[]  = daedatabase
+core = 6.x
+version = "6.x-2.2"
+core = "6.x"
+project = "DAE services"

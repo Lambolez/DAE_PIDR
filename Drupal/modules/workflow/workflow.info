@@ -1,0 +1,5 @@
+;$Id:$
+name = "DAE Workflow"
+description = "This module allows users to interact with the taverna server"
+core = 6.x
+package = DAE Modules

@@ -1,0 +1,55 @@
+<metadata>
+	
+	<data>
+		<id>input1</id>
+		<name></name>
+		<description>This is the input images to the ocrad algorithm.</description>
+		<ordering>1</ordering>
+		<required>1</required>
+		<type_of>
+			<datatype_id>3</datatype_id>
+		</type_of>
+	</data>
+	
+	<!--This algorithm is the OCRAD OCR algorithm.-->
+	<algorithm>
+		<name>ocrad</name>
+		<version>0.19</version>
+		<path>algorithm/ocrad</path>
+		<description>This is an OCR algorithm. It takes pnm image as input and produce layout information and ocr results.</description>
+		<time_complexity>N/A</time_complexity>
+		<space_complexity>N/A</space_complexity>
+
+		<algorithm_input>
+			<data_id type="internal">input1</data_id>
+		</algorithm_input>
+
+		<algorithm_output>
+			<data_id type="internal">output1</data_id>
+		</algorithm_output>
+
+		<algorithm_output>
+			<data_id>143</data_id>
+		</algorithm_output>
+
+		<defines_algorithm>
+			<person_id>des308@lehigh.edu</person_id>
+		</defines_algorithm>
+	</algorithm>
+	
+	<!--test if the metadata parsing program can temporarily ignore output1 when parsing algorithm metadata and 
+		turn back to it after parsing this data as one of this algorithm's outputs.-->
+	<data>
+		<id>output1</id>
+		<name>-x</name>
+		<description>The output file from ocrad containing layout analysis and ocr results.</description>
+		<ordering>2</ordering>
+		<required>0</required>
+		<!--this output is just file and we could let the user choose to parse this file to write
+			more meaningful information into database, such as bounding box, etc.-->
+		<type_of>
+			<datatype_id>4</datatype_id>
+		</type_of>
+	</data>
+	
+</metadata>

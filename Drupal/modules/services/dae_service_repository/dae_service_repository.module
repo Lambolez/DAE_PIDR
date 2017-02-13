@@ -1,0 +1,48 @@
+<?php
+// $Id: $
+
+/**
+ * @file
+ *  Link commenting functionality to services module.
+ */
+
+
+/**
+ * This is the service authorization handler.
+ * 
+ * Currently this is only a stub.
+ * 
+ * \todo Set up complete authentification handling for Web Services
+ * 
+ */
+function dae_service_repository_auth() {
+    return (user_access('raw read-only DAE database access') || user_access('raw DAE database access'));
+    //return true;
+}
+
+/**
+ * Implementation of hook_service().
+ */
+function dae_service_repository_service() {
+  return array(
+
+    // dataitem.descript
+    array(
+      '#method'   => 'DAE Repository',
+      '#callback' => 'sql_service',
+      '#access callback'  => 'dae_service_repository_auth',
+ //     '#access arguments'  => array('get descriptions of data items'),
+      '#file'     => array('file' => 'inc', 'module' => 'dae_service_repository'),
+      '#args'     => array(
+        array(
+          '#name'         => 'sql',
+          '#type'         => 'string',
+          '#description'  => t('the sql query'),
+        ),
+      ),
+      '#return' => 'SQLResult',
+      '#help' => t('Retrieve sql results'),
+    ),
+
+  );
+}

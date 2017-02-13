@@ -1,0 +1,670 @@
+<?php
+// $Id:$
+
+/**
+ * @file
+ * 
+ * @author  Mike Kot <mdk312@lehigh.edu>
+ * 
+ * @version 1.0
+ *
+ * \brief The home_directory module creates user directories and allows creation of subdirectories.
+ * 
+ * @section LICENSE
+ * 
+ *  This file is part of the DAE Platform Project (DAE).
+ *
+ *  DAE is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  DAE is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with DAE.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+  
+require_once("home_directory_uploads.var");
+
+/**
+ * Implementation of hook_menu().
+ */
+function home_directory_menu() 
+{
+  $items = array();
+/**
+	Temporarily deactivating personal upload directory
+ */
+  /*
+	$items['uploads'] = array(
+	'title' => 'My Uploads',
+	'page callback' => 'home_directory_uploads',
+	'file' => 'home_directory_uploads.inc',
+	'access arguments' => array('access uploads'),
+	);
+	$items['uploads/commit'] = array(
+	'title' => 'Commit Data',
+	'page callback' => 'home_directory_commit',
+	'access arguments' => array('commit data'),
+	);
+	$items['uploads/batch'] = array(
+	'title' => 'Batch Operations',
+	'page callback' => 'home_directory_run_batch',
+	'file' => 'home_directory_batch.inc',
+	'access arguments' => array('access uploads'),
+	'type' => 'MENU_CALLBACK'
+	);
+	*/
+	$items['getThumb'] = array(
+	'title' => 'Thumb',
+	'page callback' => 'home_directory_thumb',
+	'access arguments' => array('access uploads'),
+	'type' => 'MENU_CALLBACK'
+	);
+	$items['getFullSize'] = array(
+	'title' => 'Thumb',
+	'page callback' => 'home_directory_fullsize',
+	'access arguments' => array('access uploads'),
+	'type' => 'MENU_CALLBACK'
+	);
+	$items['getFile'] = array(
+	'title' => 'Download',
+	'page callback' => 'home_directory_download',
+	'access arguments' => array('access uploads'),
+	'type' => 'MENU_CALLBACK'
+	);
+	$items['admin/settings/home_directory'] = array (
+	'title' => 'DAE Home Directory Settings',
+	'description' => 'Configure home directory settings.',
+    'access arguments' => array('administer site configuration'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('home_directory_admin'),
+    'file' => 'home_directory.admin.inc',
+	);
+	$items['upload'] = array (
+	'title' => 'Upload',
+	'description' => 'Upload Data.',
+    'access arguments' => array('upload data'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('home_directory_upload'),
+    'file' => 'home_directory_upload_file.inc',
+    'type' => 'MENU_CALLBACK'
+	);
+	$items['upload/mkdir'] = array (
+	'title' => 'Make Directory',
+	'description' => 'Make a new directory',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('home_directory_mkdir'),
+	'access arguments' => array('upload data'),
+	'file' => 'home_directory_mkdir.inc',
+	'type' => 'MENU_CALLBACK'
+	);
+    return $items;
+}
+/**
+ * Implementation of hook_perm().
+ */
+function home_directory_perm()
+{
+	return array('access uploads', 'access runs', 'commit data', 'upload data', 'delete data');
+}
+
+/**
+ * Implementation of hook_user().
+ *
+ * Makes a user's uploads and runs directories.  Also adds user to oracle database and creates a user storage row in the 
+ * drupal MySQL db
+ *
+ */
+function home_directory_user($op, &$edit, &$account, $category = NULL)
+{
+ 	$userDataDir = variable_get('home_directory_userdata', '');
+ 	
+ 	require_once("./".drupal_get_path('module','daedatabase')."/daedatabase_db.inc");
+ 	require_once("./".drupal_get_path('module','dae_data')."/dae_data_person.inc");
+ 	$db = getDAEDatabase();
+ 	switch($op){
+ 	case "update":
+ 		$pid=getPID($account->uid);
+ 		$variables[':profilename'] = getProfileValue($account->uid,'profile_name');
+ 		$variables[':pid'] = $pid;
+ 		$db->q('update person set NAME=:profilename where ID=:pid', $variables);
+ 		
+ 		// \TODO 
+ 		// currently we assume users would not change one's email address to some email address already in Oracle but not in local Drupal
+ 		// otherwise there will be inconsistency in database
+ 		
+ 		updatePersonInfo("Email",$pid,$account->mail);
+ 		updatePersonInfo("Affiliation",$pid,getProfileValue($account->uid,'profile_affiliation'));
+ 		updatePersonInfo("Address",$pid,getProfileValue($account->uid,'profile_address'));
+ 		updatePersonInfo("Phone_Number",$pid,getProfileValue($account->uid,'profile_phone'));
+ 		updatePersonInfo("Research_Interest",$pid,substr(getProfileValue($account->uid,'profile_interests'),0,100));
+ 		break;
+ 		
+ 	case "insert":
+ 		mkdir($userDataDir.$account->uid);
+ 		mkdir($userDataDir.$account->uid."/uploads",0700);
+ 		mkdir($userDataDir.$account->uid."/runs",0700);
+ 		update_sql("insert into {user_storage} values(".$account->uid .",0)");
+
+ 		// check email, if existing in Oracle, merge.
+ 		$bMerge=1;
+ 		$pid=getPIDByEmail($account->mail);
+ 		// otherwise get a new PID, insert to mysql
+ 		if($pid==-1){
+ 			$pid=getNextPID();
+ 			$bMerge=0;
+ 		}
+ 		$sql="insert into profile_values(fid,uid,value) select fid,".$account->uid.",'$pid' from profile_fields where name='profile_person_id'";
+ 		update_sql($sql);
+ 		
+ 		$variables[':profilename'] = getProfileValue($account->uid,'profile_name');
+ 		$variables[':pid'] = $pid;
+ 		
+ 		if($bMerge==0){
+ 			$sql='insert into Person(ID,NAME) values(:pid, :profilename)';
+ 		}else{
+ 			drupal_set_message('Your account is merged with the existing one','warning');
+ 			$sql='update Person set NAME=:profilename where ID=:pid';
+ 		}
+ 		
+ 		$db->q($sql,$variables);
+ 		
+ 		insertPersonInfo("Email",$pid,$account->mail,$account->uid,null);
+ 		insertPersonInfo("Affiliation",$pid,getProfileValue($account->uid,'profile_affiliation'),$account->uid,'profile_affiliation');
+ 		insertPersonInfo("Address",$pid,getProfileValue($account->uid,'profile_address'),$account->uid,'profile_address');
+ 		insertPersonInfo("Phone_Number",$pid,getProfileValue($account->uid,'profile_phone'),$account->uid,'profile_phone');
+ 		insertPersonInfo("Research_Interest",$pid,substr(getProfileValue($account->uid,'profile_interests'),0,100),$account->uid,'profile_interests');
+ 		break;
+ 		
+ 	case "delete":
+ 		shell_exec("rm -r ".$userDataDir.$account->uid);
+ 		break;
+ 	}
+}
+
+/**
+ * This function returns the profile value of the user in Drupal database
+ * 
+ * @param $uid Drupal user id
+ * @param $profileField Drupal profile field name
+ * @return the corresponding person id (pid) in the Person table in the Oracle database.
+ */
+function getProfileValue($uid,$profileField){
+	$sql="SELECT pv.value FROM profile_fields pf, profile_values pv WHERE pf.name = '$profileField' AND pf.fid = pv.fid AND pv.uid =$uid";
+	$result = db_result(db_query($sql));
+    return $result;
+	
+}
+
+/**
+ * This function is called when a new user registers at Drupal 
+ * to save one of the user's profile values into the corresponding Oracle database. 
+ * 
+ * @param $tblStr the string of the Oracle database table corresponding to the profile field
+ * @param $pid the Person ID in Oracle database
+ * @param $val the value of the profile field
+ * @param $uid the user ID in Drupal
+ * @param $profile_field Drupal profile field name
+ */
+function insertPersonInfo($tblStr,$pid,$val,$uid,$profile_field){
+	require_once("./".drupal_get_path('module','daedatabase')."/daedatabase_db.inc");
+ 	$db = getDAEDatabase();
+ 	$colStr=strtoupper($tblStr);
+ 	if($tblStr=="Email"){
+ 		$hasTblStr="has_More_Email";
+ 	}else{
+ 		$hasTblStr="has_$tblStr";
+ 	}
+ 	
+	if(!empty($val)){
+	    
+	    $variables[':value'] = $val;
+ 		$vid=$db->r("select ID from $tblStr o where o.$colStr=:value",$variables);
+ 		if(empty($vid)){
+ 			$sql="insert into $tblStr($colStr) values(:value)";
+ 			$db->q($sql,$variables);
+ 			$vid=$db->r("select ID from $tblStr o where o.$colStr=:value",$variables);
+ 		}
+ 		$sql="select PERSON_ID from $hasTblStr where PERSON_ID=$pid";
+ 		$rslt=$db->r($sql,array());
+ 		if(empty($rslt)){
+	 		$sql="insert into $hasTblStr(PERSON_ID,".$colStr."_ID) values($pid,$vid)";
+	 	}else{
+	 		$sql="update $hasTblStr set ".$colStr."_ID=$vid where PERSON_ID=$pid";
+	 	}
+ 		$db->q($sql,array());
+ 	}else{
+ 		if($profile_field!=null){
+ 			$sql="select $colStr from $hasTblStr h, $tblStr o where h.".$colStr."_ID=o.ID and h.PERSON_ID=".$pid;
+ 			$val2=$db->r($sql,array());
+ 			if(!empty($val2)){
+ 				$sql="insert into profile_values(fid,uid,value) select fid,$uid,'$val2' from profile_fields where name='$profile_field'";
+ 				update_sql($sql,array());
+ 			}
+ 		}
+ 	}
+}
+
+/**
+ * This function is called when an existing user updates his profile 
+ * to save one of the user's profile values into the corresponding Oracle database. 
+ * 
+ * @param $tblStr the string of the Oracle database table corresponding to the profile field
+ * @param $pid the Person ID in Oracle database
+ * @param $val the value of the profile field
+ */
+function updatePersonInfo($tblStr,$pid,$val){
+	
+	// \TODO email update issue
+	require_once("./".drupal_get_path('module','daedatabase')."/daedatabase_db.inc");
+ 	$db = getDAEDatabase();
+ 	$colStr=strtoupper($tblStr);
+ 	if($tblStr=="Email"){
+ 		$hasTblStr="has_More_Email";
+ 	}else{
+ 		$hasTblStr="has_$tblStr";
+ 	}
+ 		
+	if(!empty($val)){
+	    $variables[':value'] = $val;
+		$sql="select ID from $tblStr o where o.$colStr=:value";
+ 		$vid=$db->r($sql,$variables);
+ 		if(empty($vid)){
+ 			$sql="insert into $tblStr($colStr) values(:value)";
+ 			$db->q($sql,$variables);
+ 			$vid=$db->r("select ID from $tblStr o where o.$colStr=:value",$variables);
+ 		}
+ 		$sql="select PERSON_ID from $hasTblStr where PERSON_ID=$pid";
+ 		$rslt=$db->r($sql,array());
+ 		if(empty($rslt)){
+	 		$sql="insert into $hasTblStr(PERSON_ID,".$colStr."_ID) values($pid,$vid)";
+	 	}else{
+	 		$sql="update $hasTblStr set ".$colStr."_ID=$vid where PERSON_ID=$pid";
+	 	}
+ 		$db->q($sql,array());
+ 	}else{
+ 		$sql="delete from $hasTblStr where PERSON_ID=$pid";
+ 		$db->q($sql,array());
+ 	}
+}
+
+/**
+ * \brief Returns a mimetype for a given file extension
+ * 
+ * @param $ext the file extension without a period
+ * @param $default allows you to set a mimetype if the $ext is not found
+ */
+function home_directory_content_type($ext,$default = "text/plain")
+{
+	/**
+	 * \todo this should probably better be retrieved from the running environment rather than
+	 * be application defined.
+	 */
+
+	switch($ext)
+	{
+  		case "png": $content="image/png"; break;
+  		case "jpeg":
+  		case "jpg": $content="image/jpg"; break;
+  		case "gif": $content="image/gif"; break;
+  		case "bmp": $content="image/bmp"; break;
+  		case "xml": $content="txt/xml"; break;
+  		case "txt": $content="text/plain"; break;
+  		case "pdf": $content="application/pdf"; break;
+  		case "pbm": $content="image/x-portable-bitmap"; break;
+  		case "tif":
+  		case "tiff": $content="image/tiff"; break;
+  		case "zip": $content="application/zip"; break;
+  		case "gz":  $content="application/x-zip"; break;
+  		  		
+  		default: $content=$default;
+	}
+	return $type;
+}
+/**
+ * \brief Get file extension from a filename
+ * 
+ * @param $file the filename.  Paths are ok as long as there is a file name with a .
+ *
+ */
+function home_directory_get_filename_from_path($file)
+{
+	$file = explode("/",$file);
+	end($file);
+	return $file[key($file)];
+}
+/**
+ * \brief Get the path to a file from the full filepath
+ * 
+ * @param $file the full file path
+ *
+ */
+function home_directory_get_path_to_file_dir($file)
+{
+	$file = explode("/",$file);
+	end($file);
+	unset($file[key($file)]);
+	$file = implode("/",$file);
+	return $file;
+}
+/**
+ * \brief Get file extension from a filename
+ * 
+ * @param $file the filename.  Paths are ok as long as there is a file name with a .
+ *
+ */
+function home_directory_get_file_extension($file)
+{
+	$file = explode(".",$file);
+	end($file);
+	return $file[key($file)];
+}
+/**
+ * \brief Checks that a file exists in $uploads
+ * 
+ * Assumes $uploads is set and globally available.  Paths relative to $uploads are fine
+ * 
+ * @param $file the file with path relative to user's $uploads
+ */
+function home_directory_file_uploads_exists($file)
+{
+	global $uploads;
+	return is_file($uploads.$file);
+}
+/**
+ * \brief Gets a fullsize version of the image to display
+ * 
+ * Assumes $uploads is set and globally available
+ * 
+ * @param $file the file with path relative to user's $uploads
+ *
+ * @todo replace with code for thumb before changing thumb
+ */
+function home_directory_fullsize()
+{
+	home_directory_thumb();
+}
+/**
+ * \brief callback for getThumb
+ * 
+ * Assumes $uploads is set and globally available
+ * 
+ * @param arg(1...) the path to the file (and thumbnail) relative to $uploads
+ *
+ * @todo make it actually get thumbs instead of fullsize
+ */
+function home_directory_thumb()
+{
+	global $uploads;
+	$loc = arg();
+	unset($loc[0]);
+	
+	$path = "/". implode("/",$loc);
+	
+	if(!file_exists($uploads . $path)){
+		drupal_set_message(t('This file does not exist, or you do not have access.'),'warning');
+		return "";
+	}
+	else
+	{
+		end($loc);
+		$ext = home_directory_get_file_extension($loc[key($loc)]);
+		$isImage = home_directory_check_image($ext); 
+		
+		if($isImage)
+		{
+			$content = home_directory_content_type($ext,"image/jpeg");
+			header("content-type: $content");
+			readfile($uploads.$path);
+		}
+		else
+		{
+			header("content-type: image/png");
+			if(is_file(getcwd().'/'.drupal_get_path("module","dae_ui")."/images/filetypes/file_".$ext.".png"))
+				readfile(getcwd().'/'.drupal_get_path("module","dae_ui")."/images/filetypes/file_".$ext.".png");
+			else
+				readfile(getcwd().'/'.drupal_get_path("module","dae_ui")."/images/filetypes/file_".$ext.".png");
+		}
+	}
+}
+/**
+ * \brief Decides if a file extension is an image (for purpose of displaying thumb vs filetype icon)
+ * 
+ * Uses setting in home directory settings
+ * 
+ * @param $ext the file extension without a period
+ */
+function home_directory_check_image($ext)
+{
+	return (preg_match("/$ext/i","png jpg jpeg tif tiff bmp gif"));
+}
+/**
+ * \brief Callback for getFile
+ * 
+ * Assumes $uploads and $runs are set
+ * 
+ * @param arg(1) the place to download from (uploads, runs or tmp)
+ * @param arg(2...) the rest of the args are the path to the download relative to arg(1) 
+ */
+function home_directory_download()
+{
+	global $uploads, $runs, $user;
+	$loc = arg();
+	unset($loc[0]);
+	
+	switch($loc[1])
+	{
+		case "uploads": $from = $uploads; break;
+		case "runs": $from = $runs; break;
+		case "tmp": $from = "/dae/spool/" . $user->uid . "/"; $tmp = true; break;
+		default: $from = $runs; break;
+	}
+	unset($loc[1]);
+
+	if(!$tmp)
+		$path = "/".implode("/",$loc);
+	else
+		$path = $loc[2];
+
+	if(!file_exists($from . $path)){
+		drupal_set_message(t('This file does not exist, or you do not have access.'),'warning');
+	}
+	else
+	{
+		end($loc);
+		header('Content-Disposition: attachment; filename='. $loc[key($loc)]);
+		$ext = home_directory_get_file_extension($loc[key($loc)]);
+		$content = home_directory_content_type($ext,"");
+		header("content-type: $content");
+		$size = filesize($from.$path);
+		header("Content-Length: ".$size);
+		
+	    set_time_limit(300);
+        // If it's a large file, readfile might not be able to do it in one go, so:
+        $chunksize = 10 * (1024 * 1024); // how many bytes per chunk
+        if ($size > $chunksize) {
+          $handle = fopen($from.$path, 'rb');
+          $buffer = '';
+          while (!feof($handle)) {
+            $buffer = fread($handle, $chunksize);
+            echo $buffer;
+            ob_flush();
+            flush();
+          }
+          fclose($handle);
+        } else {
+          readfile($from.$path);
+        }
+	}
+
+	return false;
+}
+/**
+ * \brief Deletes a file in the user's uploads folder and updates user's usage
+ * 
+ * Assumes $uploads is set and globally available
+ * 
+ * @param $file the file with path relative to user's $uploads
+ */
+function home_directory_remove_file($file)
+{
+	global $uploads;
+	
+	if(file_exists($uploads . $file)):
+		home_directory_change_usage(-(filesize($uploads . $file)));
+		unlink($uploads . $file);
+	else:
+		watchdog("File Does Not Exists",t("There was a failed attempt to delete \"%file\".",array("%file" => $file)),array(),WATCHDOG_ERROR);
+	endif;
+}
+/**
+ * \brief Deletes a directory and the files inside while updating user storage
+ * 
+ * Assumes $uploads is set and globally available
+ * 
+ * @param $dir the directory to delete
+ * @param $subdir used for recursing by the function
+ */
+function home_directory_remove_directory($dir,$subdir = "")
+{
+	global $uploads;
+	
+	if(is_dir($uploads .'/'. $dir))
+	{
+	
+		$uploadsDir = $uploads . $dir .'/' . $subdir;
+		
+		$files = hd_scandir($uploadsDir);
+		
+		foreach($files as $file):
+		
+			if(is_dir($uploadsDir . '/' . $file))
+				home_directory_remove_directory($dir,$subdir.$file.'/');
+			else if(is_file($uploadsDir . '/' . $file))
+				 home_directory_remove_file($dir .'/' . $subdir . $file);
+			
+		endforeach;
+		rmdir($uploadsDir);
+	}	
+	
+}
+/**
+ * \brief Get a list of files in the given directory without . and ..
+ * 
+ * Sets a watchdog message if the directory does not exist
+ * 
+ * @param $dir full path from root
+ */
+function hd_scandir($dir)
+{
+	if(file_exists($dir)):
+		
+		$files = scandir($dir);
+		foreach($files as $key => $file):
+		
+			if($file == ".." || $file == ".")
+				unset($files[$key]);
+		
+		endforeach;
+		return $files;
+		
+	else:
+		watchdog("Directory Not Found",t("There was a failed attempt to access \"%dir\".",array("%dir" => $dir)),array(),WATCHDOG_ERROR);
+		return array();
+	endif;
+}
+
+function home_directory_commit()
+{
+	return "Under Construction";
+}
+/**
+ * \brief Takes a user's input for a directory name and sanitizes/avoids name conflicts
+ * 
+ * Replaces anything but letters and numbers with underscores
+ * 
+ * Uses home_directory_dir_rename to fix conflicting names
+ * 
+ * @param $dir the user input for the name of the directory
+ * @param $fullPathtoDir the path from root to the directory (not including the directory)
+ * @param $recurse doesn't do anything right now
+ * @todo allow directories to be recursively created
+ */
+function home_directory_make_directory($dir,$fullPathtoDir,$recurse = false)
+{
+	$dirName = preg_replace("/[^a-zA-Z0-9]/","_",$dir);
+	$dirName = home_directory_dir_rename($fullPathtoDir,$dirName);
+		
+	if(mkdir($fullPathtoDir.$dirName))
+		return $dirName;
+	else
+		return false;
+}
+/**
+ * \brief Renames files if the file already exists
+ * 
+ * Uses the format <original-name>_1.<original-extension> and increments until file does not exist
+ * 
+ * IMPORTANT: Assumes the filename has already been sanitized
+ * 
+ * @param $path full path from root
+ * @param $filename the sanitized filename you would like to try to make
+ */
+function home_directory_upload_rename($path,$filename)
+{
+	$filenameParts = explode('.',$filename);
+	$num = 1;
+	while(is_file($path.$filename)):
+		$filename = $filenameParts[0] . "_" . $num . "." . $filenameParts[1];
+		$num++;
+	endwhile;
+	
+	return $filename;
+}
+/**
+ * \brief Used when creating directories to get a new name if the directory exists 
+ * 
+ * Adds _<number> until the directory does not exist
+ *
+ * IMPORTANT: Assumes the directory name has already been sanitized.
+ * 
+ * @param $path full path from root
+ * @param $dirName the sanitized directory name you would like to try
+ */
+function home_directory_dir_rename($path,$dirName)
+{
+	$num = 1;
+	$try = $dirName;
+	while(file_exists($path.$try)):
+		$try = $dirName . "_" . $num;
+		$num++;
+	endwhile;
+	
+	return $try;
+}
+
+/**
+ * \brief Updates the current user's file storage amount
+ * 
+ * A user must be logged in
+ * 
+ * @param $amount integer amount in bytes
+ */
+function home_directory_change_usage($amount)
+{
+	global $user;
+	if($amount < 0)
+	{
+		$r = db_query("select used from {user_storage} where uid = ".$user->uid);
+		$row = db_fetch_array($r);
+		if($amount*-1 > $row['used'])
+			$amount = $row['used']*-1;
+	}
+	update_sql("update {user_storage} set used = used+". $amount ." where uid = ".$user->uid);
+}

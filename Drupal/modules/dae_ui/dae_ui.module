@@ -1,0 +1,1114 @@
+<?php
+// $Id:$
+
+/**
+ * @file dae_ui.module
+ * 
+ * @author  Mike Kot <mdk312@lehigh.edu>
+ * 
+ * @version 1.0
+ *
+ * \brief Provides the classes which produce the html for dae modules
+ *  
+ * @section LICENSE
+ * 
+ *  This file is part of the DAE Platform Project (DAE).
+ *
+ *  DAE is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  DAE is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with DAE.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * 
+ */
+
+drupal_add_css(drupal_get_path("module","dae_ui") . '/jquery.alerts.css');
+drupal_add_js(drupal_get_path("module","dae_ui") . '/jquery.alerts.js');
+
+/**
+ * This class is used to create the browse page.
+ *  
+ */
+class DataUI
+{
+	var $items = array();
+	var $pages;
+	
+	/**
+	 * @param [in] $search a form containing only a textfield for searching data
+ 	 * @param [in] $pagination an array containing the number of items 'count', the page number 'page' and the
+ 	 *						number of items per page 'per'
+ 	 *
+ 	 * @return - call getOutput() to build and return a dataset page
+ 	 * 			
+ 	 */
+	function __construct($search,$pagination)
+	{
+		$this->pages = $pagination;
+		
+		$interval = arg(2);
+		
+		if(arg(1) == "popular"):
+			$active = array('attributes' => array('class' => 'active'));
+			$arrow = "<span class=\"dropdown-arrow-right\"></span>"; //arrow to signal drop down menu
+		else:
+			$active = array();
+		endif;
+		
+		$checked = "<span class=\"selected\"></span>"; //check mark for popular time interval drop down
+		
+		$this->output = 
+		"<div class=\"dae-data-browse-functions\">
+			<li>Browse:</li> ".
+			"<li id=\"dae-data-browse-new\" class=\"link\">".l("New","browse/new")."</li>".
+			"<li id=\"dae-data-browse-top-rated\" class=\"link\">".l("Top Rated","browse/top-rated")."</li>".
+			"<li id=\"dae-data-browse-popular\" class=\"link\">".l("Popular","browse/popular",$active)."$arrow</li>".
+			"<div id=\"dae-data-popular-options\" class=\"popup\">
+				<li>".l(($interval == "today"?$checked:"")."Today","browse/popular/today",array('html' => true, 'query' => array('filter' => $_GET['filter'])))."</li>
+				<li>".l(($interval == "week"?$checked:"")."This Week","browse/popular/week",array('html' => true, 'query' => array('filter' => $_GET['filter'])))."</li>
+				<li>".l(($interval == "month"||empty($interval)?$checked:"")."This Month","browse/popular/month",array('html' => true, 'query' => array('filter' => $_GET['filter'])))."</li>
+				<li>".l(($interval == "year"?$checked:"")."This Year","browse/popular/year",array('html' => true, 'query' => array('filter' => $_GET['filter'])))."</li>
+				<li>".l(($interval == "all-time"?$checked:"")."All Time","browse/popular/all-time",array('html' => true, 'query' => array('filter' => $_GET['filter'])))."</li>
+			</div>".
+			$search.
+			"</div><div class=\"dae-data-browse-functions-filter\">Filter: ".
+			l("All",implode("/",arg()),array('query' => array('filter' => 'all'))).
+			l("Datasets",implode("/",arg()),array('query' => array('filter' => 'datasets'))).
+			l("Root Datasets",implode("/",arg()),array('query' => array('filter' => 'roots'))).
+			l("Page Images",implode("/",arg()),array('query' => array('filter' => 'page_images'))).
+			"</div>
+		<ul class=\"dae-data-browse-list-item-large\">
+		";
+	}
+	
+	/**
+	 * This function takes an array of info and creates the HTML for a single data record and
+	 * saves it in an array for later
+	 *  
+	 * @param $info - an array containing 'id' = dataitem id, 'thumb_source' = path to thumbnail,
+	 *				 'name' = data item name, 'stars' = html for the star rating of the data item
+	 *				 'activity' = activity rating for the given time interval, 'tags' = a comma separated
+	 *				 list of tag links
+	 * 
+	 */
+	function addDataitemRecord($info)
+	{
+		extract($info);
+		
+		$this->items[$id] = $output;
+    /*"<li class=\"data-home-list-item\" id=\"$id\">
+			<div class=\"dae-data-browse-thumb\">
+				<div class=\"dae-data-browse-thumb-align\">".
+					l("<img src=\"$thumb_source\" alt=\"\" />","browse/dataitem/$id",array('html' => true))."
+				</div>
+			</div>
+			<h3>$name</h3>
+			$stars
+			<div class=\"dae-data-activity\">
+				$activity
+			</div>
+			<div class=\"dae-data-tags\">
+				<h6>TAGS:</h6>
+				$tags
+			</div>
+		</li>
+		";*/
+		
+	}
+	/**
+	 * This function takes an array of info and creates the HTML for a single tag record and
+	 * saves it in an array for later
+	 *  
+	 * @param $info - an array containing 'id' = dataitem id, 'thumb_source' = path to thumbnail,
+	 *				 'name' = data item name
+	 * 
+	 */
+	function addTagRecord($info)
+	{
+		extract($info);
+		
+		$this->items[$id] = 
+		"<li class='short'>
+			<div class=\"dae-data-browse-thumb short\">".
+					l("<img src=\"$thumb_source\" alt=\"\" />","browse/dataitem/$id",array('html' => true))."
+			</div>
+			<h3>$name</h3>
+		</li>
+		";
+		
+	}
+	/**
+	 * This takes the array of data item html created and incremented each time
+	 * a data item is added using addDataitemRecord()
+	 *  
+	 * @param $order - an array of data item IDs in the order they are to be displayed
+	 * @return - a full page containing the navigation and data item records, or no data item
+	 *			records found if none were added.
+	 *
+	 */
+	function getOutput($order = false)
+	{
+		if(count($this->items) < 1)
+			return $this->output . "<h3>No Datasets Found</h3>";
+			
+		if(!$order) //if no order is specified, data item records are just concatenated
+			$this->output .= implode("",$this->items);
+		else
+			foreach($order as $data_item):
+			
+				$this->output .= $this->items[$data_item];
+			
+			endforeach;
+		
+		
+		$this->output .= "</ul><br class=\"clear\">"; //close data item record list
+		
+		$this->pagination(); //add page links
+				
+		return $this->output;
+	}
+	/**
+	 * This uses the predefined class variable pages to determine which page links to display
+	 * and correctly select the current page
+	 *
+	 * 
+	 * @return - No return, but class var output is modified to have pagination links.
+	 *
+	 */
+	function pagination()
+	{
+		$no_pages = ceil($this->pages['count']/$this->pages['per']); //find number of pages necessary
+		
+		$filter = $_GET['filter'];
+		$s = $_GET['s'];
+		if(!empty($filter) && !empty($s))
+			$q = array('query' => array('filter' => $filter, 's' => $s));
+		elseif(!empty($filter))
+			$q = array('query' => array('filter' => $filter));
+		elseif(!empty($s))
+			$q = array('query' => array('s' => $s));
+		else
+			$q = array();
+		
+		$page_link = array();
+		
+		if($no_pages <= 6):
+		
+			for($i=1;$i<=$no_pages;$i++):
+				$page_link[] = $i;
+			endfor;
+
+		elseif($this->pages['page'] > 3 && $no_pages > $this->pages['page']+3)://something like 1...4 5 6...15
+			
+			$page_link = array(
+							1,
+							"...",
+							$this->pages['page']-1,
+							$this->pages['page'],
+							$this->pages['page']+1,
+							$this->pages['page']+2,
+							"...",
+							$no_pages
+						 );
+		
+		
+		
+		elseif($this->pages['page'] > $no_pages-4):
+		//something like 1...22 23 24 25
+			$page_link[] = 1;
+			$page_link[] = "...";
+			for($i=$no_pages-4;$i<=$no_pages;$i++):
+				$page_link[] = $i;
+			endfor;
+		
+		else: //something like 1 2 3 4 5...21
+		
+			for($i=1;$i<=5;$i++):
+				$page_link[] = $i;
+			endfor;
+			
+			$page_link[] = "...";
+			$page_link[] = $no_pages;
+		
+		endif;
+		
+		$this->output .= "<ul class=\"dae-data-browse-pages\">";
+		
+		foreach($page_link as $link):
+			
+			if(!is_numeric($link)):
+				$this->output .= "<li>$link</li>";
+			elseif($link != $this->pages['page']):
+				$q['query']['page'] = $link;
+				$this->output .= "<li>".l($link,"browse/".$this->pages['browse_by'],$q)."</li>";
+			else:
+				$this->output .= "<li><a href=\"#\" class=\"active-page\" onClick=\"return false\">$link</a></li>";
+			endif;
+
+		endforeach;
+	
+		$this->output .= "</ul>";
+	}
+}
+
+class RunUI
+{
+	
+	function __construct($prefix)
+	{
+		$this->prefix = $prefix;
+		
+		drupal_add_css(drupal_get_path("module","dae_ui") . '/default.css');
+		drupal_add_js(drupal_get_path("module","dae_ui") . '/dae_ui_effects.js');
+		
+		$this->output .= "<ul id=\"".$this->prefix."_list\">";
+	}
+	function getRunStatus($row)
+	{
+		require_once("./".drupal_get_path('module','algorithms')."/algorithms_status.var");
+	
+		switch($row['STAT'])
+		{
+			case RUN_FAILED: //str_replace("\n","<br/>", shell_exec(" perl -le 'print $!+0, \"\t\", $!++ for 0..150'"));
+				return "<div class=\"dae-run-failed\">
+							Run Failed
+							<span class=\"actions\">
+								<img src=\"".drupal_get_path('module','dae_ui')."/images/x.png\" alt=\"\" onClick=\"event.stopPropagation(),runDelete(".$row['ALGORITHM_RUN_ID'].")\" title=\"Delete Run\" />
+
+							</span>
+						</div>";
+				break;
+			case RUN_COMPLETE:
+				return "<span class=\"algorithm_run_complete\">
+							Complete
+						</span>
+						<span class=\"actions\">"
+							.l("<img src=\"".drupal_get_path('module','dae_ui')."/images/copy.png\" alt=\"\" />",
+								'run/copy/'.$row['ALGORITHM_RUN_ID'],
+								array('html' => true,
+								'attributes' => array(
+									'onClick' => 'event.stopPropagation();',
+									'title' => 'Copy Output to My Uploads'
+									)
+								)
+							 )
+							.l("<img src=\"".drupal_get_path('module','dae_ui')."/images/download.png\" alt=\"\" />",
+								'getFile/runs/'.$row['ALGORITHM_RUN_ID'].'/output/output.zip',
+								array('html' => true,
+								'attributes' => array(
+									'onClick' => 'event.stopPropagation();',
+									'title' => 'Download Output'
+									)
+								)
+							 )
+							 ."<img src=\"".drupal_get_path('module','dae_ui')."/images/x.png\" alt=\"\" onClick=\"event.stopPropagation(),runDelete(".$row['ALGORITHM_RUN_ID'].")\" title=\"Delete Run\" />
+
+						</span>";
+				break;
+			case RUN_RUNNING:
+				return "<span id=\"run_status-".$row['ALGORITHM_RUN_ID']."\" class=\"algorithm_run_running\">
+							In Progress
+							<img id=\"run_status_image-".$row['ALGORITHM_RUN_ID']."\" src=\"".drupal_get_path("module","dae_ui")."/images/running.gif\" alt=\"Running\" />
+						</span>";
+				break;
+			default:
+				return "<span id=\"run_status-".$row['ALGORITHM_RUN_ID']."\" class=\"algorithm_run_unknown\">
+							Status Unknown
+							<span class=\"actions\">
+								<img src=\"".drupal_get_path('module','dae_ui')."/images/x.png\" alt=\"\" onClick=\"event.stopPropagation(),runDelete(".$row['ALGORITHM_RUN_ID'].")\" title=\"Delete Run\" />
+							</span>
+						</span>";
+				break;
+		}
+
+	}
+
+	function addRecord($info)
+	{
+	
+		$this->output .= "<li id=\"run-".$info['id']."\" class=\"".$info['children']."\">
+							<div class=\"".$this->prefix."-li\">
+								<div class=\"".$this->prefix."-name click\" onClick=\"".$info['onRowClick']."\">
+									<span class=\"left\">
+										<img src=\"".drupal_get_path('module','dae_ui')."/images/".$info['image']."\" alt=\"\" />
+										".$info['left']."
+										<span id=\"loading-".$info['id']."\" class=\"loading\"></span>
+									</span>
+									".$info['right']."
+								</div>
+								<div class=\"".$this->prefix."-info\">
+									<div class=\"clear\"></div>
+								</div>
+							</div>
+						  </li>
+						  ";
+	}
+	function getOutput()
+	{
+		return $this->output . "</ul>";
+	}
+
+}
+/**
+ * This class is used to make a toolbar to display above data
+ *  
+ * @param $info - an array currently containing only a tag form as 'tag_form'
+ * @param $toolbar - an optional array which specifies which buttons to show and what order
+ *					single buttons can be overridden, or the entire toolbar may be specified
+ *
+ * @return - call getOutput() to return the toolbar html page
+ * 			
+ */
+class DAE_Toolbar
+{
+	function __construct($info,$toolbar = array(),$title)
+	{
+    $default_toolbar = array(
+			'download' => true,
+			'copy' => true,
+			'space',
+			'run' => true,
+			'space',
+			'tag' => true,
+			'tree' => true,
+			'flag' => true,
+			'space',
+			'view_page_elements' => false,
+			'add_page_element' => false,
+			
+		);	
+		
+		$toolbar = array_merge($default_toolbar,$toolbar);
+		
+		extract($info);
+		
+		$this->output .= "<div class=\"dataset-toolbar-wrapper\"><div class=\"dataset-toolbar\">"; //Start toolbar buttons
+		
+		foreach($toolbar as $button => $active):
+			if(is_numeric($button)):
+				$this->output .= "<div class=\"spacer\"></div>";
+			elseif($active):
+				switch($button)
+				{
+					case "download":
+						$this->output .= "<li id=\"dae-toolbar-download\" title=\"Download\" class=\"dataset-toolbar-item left\"></li>";
+						break;
+					case 'copy':
+						$this->output .= "<li id=\"dae-toolbar-copy\" title=\"Copy\" class=\"dataset-toolbar-item left\"></li>";
+						break;
+					case 'tag':
+						$this->output .= "<li id=\"dae-toolbar-tag\" title=\"Tag\" class=\"dataset-toolbar-item left\"></li>
+											<div id=\"tag-menu\" class=\"dae-dropdown-menu\">
+												<div class=\"dae-dropdown-arrow\"></div>
+												<ul id=\"tag-form\" class=\"dae-dropdown-box\">	
+													$tag_form
+												</ul>
+											</div>";
+						break;
+					case 'tree':
+						$this->output .= "<li id=\"dae-toolbar-tree\" title=\"Tree\" class=\"dataset-toolbar-item left pageimage-op\"></li>
+											<div id=\"tree-menu\" class=\"dae-dropdown-menu\">
+												<div class=\"dae-dropdown-arrow\"></div>
+												<ul id=\"tree-list\"  class=\"dae-dropdown-box\">
+													<img src=\"".drupal_get_path("module","dae_ui")."/images/ajax.gif\" alt=\"Loading\" />
+												</ul>
+											</div>";
+						break;
+					case 'run':
+						$this->output .= "<li id=\"dae-toolbar-run\" title=\"Run\" class=\"dataset-toolbar-item left pageimage-op\"></li>
+											<div id=\"run-menu\" class=\"dae-dropdown-menu\">
+												<div class=\"dae-dropdown-arrow\"></div>
+												<ul id=\"possible-algorithms\" class=\"dae-dropdown-box\">
+													<img src=\"".drupal_get_path("module","dae_ui")."/images/ajax.gif\" alt=\"Loading\" />
+												</ul>
+											</div>";
+						break;
+					case 'add_page_element':
+						$this->output .= "<li id=\"dae-toolbar-add-element\" title=\"Add Element\" class=\"dataset-toolbar-item left\"></li>";
+						break;
+					case 'view_page_elements':
+						$this->output .= "<li id=\"dae-toolbar-view-elements\" title=\"View Elements\" class=\"dataset-toolbar-item left\"></li>";
+						break;
+				}
+			endif;
+			
+    endforeach;
+    $rating = new TitleSubmitterRating($title);
+		$this->output .= $rating->getOutput();
+		$this->output .= "</div><div id=\"toolbar-breadcrumb\">";
+    $this->output.= $title['name'];
+    $this->output .= "</div></div>"; //end toolbar buttons, begin body
+	}	
+  function getOutput()
+	{
+		return $this->output;
+	}
+}
+/**
+ * This class is used to display the rating and the submitter of a given data item
+ *  
+ * @param $content - an array containing the following:
+ *					 'submitter' => the name of the data item owner
+ *					 'stars' => an array containing 'id' the id of the data item, 'rating'
+ *								the current rating of the data item and 'rated' whether or not
+ *								the data item has been rated by the user
+ *
+ * @return - call getOutput() to return the html
+ * 			
+ */
+class TitleSubmitterRating
+{
+	function __construct($content)
+	{
+		extract($content);
+		$stars = new StarRating($stars['id'],$stars);	
+		$this->output .= "<div id=\"dataset-details-rating\">".$stars->getOutput()."</div>";
+		$this->output .= "<span id=\"dataset-details-author\">Submitted By: ";
+		// add person information link - xiz307
+		if(is_numeric($submitter)){
+			require_once("./".drupal_get_path('module','dae_data')."/dae_data_person.inc");
+			$person=new Person($submitter);
+			$paraStr=$person->getHTMLOutputStr('js');
+			$personStr="<a style=\"cursor:pointer\" 
+					onclick=\"jAlert(decodeURIComponent('$paraStr'),'Information about this person')\">".$person->name."</a>";
+			$this->output .= $personStr;
+		}else{
+			$this->output .= "None".$submitter;
+		}
+		$this->output .= "</span>";
+		
+	}
+	function getOutput()
+	{
+		return $this->output;
+	}
+}
+class PageImagePage
+{
+	function __construct($content)
+	{
+		extract($content);
+		
+		//$prefix = new TitleSubmitterRating($title);
+		//$this->output = $prefix->getOutput(); //start with name, submitter and star rating
+ 		
+		$toolbar = new DAE_Toolbar($toolbar,array('add_page_element' => true, 'view_page_elements' => true, 'tree' => true), $title); //allow adding page elements
+		$this->output .= $toolbar->getOutput(); //Add toolbar
+		
+		$this->output .= "<div id=\"page-element-toolbar\">$page_element_form</div>".	//Add body to toolbar	
+							"<div class=\"dae-data-pageimage-page\">
+								<div class=\"page-image-container item-container\">
+									<div class=\"page-image-wrapper\">
+										<img src=\"".drupal_get_path('module','dae_ui')."/images/pe-loader.gif\" alt=\"Loading\" style=\"display:none\" />	
+										<div id=\"page-image-mask\">
+											<img id=\"page-image\" src=\"$path\" alt=\"\" />
+										</div>
+										<ul id=\"page-element-list\"></ul>
+										<a href=\"#\" class=\"expand-page-image\">Show All</a>
+									</div>
+								</div>
+							</div>";
+		
+		$this->output .= $page_element_preview. //under dev preview for page element selections
+						 $comments. //display existing comments
+						 $commentForm; //display form for adding comments
+	}
+	function getOutput()
+	{
+		return $this->output;
+	}
+}
+
+class PageElementPage
+{
+	function __construct($content)
+	{
+		extract($content);
+		
+		//$prefix = new TitleSubmitterRating($title);
+		//$this->output = $prefix->getOutput(); //start with name, submitter and star rating
+ 		
+		$toolbar = new DAE_Toolbar($toolbar, array('tree'=>'true'), $title);
+		$this->output .= $toolbar->getOutput(); //Add toolbar
+		
+		$this->output .= "<div class=\"dae-data-pageimage-page\">
+							<div class=\"page-image-container item-container\">
+								<div class=\"page-image-wrapper\">	
+										<div id=\"page-image-mask\">
+											<img id=\"data-item-page-element\" src=\"$path\" alt=\"\" />
+											<div id=\"page-element-pixel-mask\">
+												<img id=\"pixel-mask-display\" src=\"$pixel_mask\" alt=\"\" />
+											</div>
+										</div>
+										<a href=\"#\" class=\"expand-page-image\">Show All</a>
+								</div>
+						 	</div>
+						  </div>";
+						  
+		$this->output .= "<div id='page-element-property-value-accordion'>";
+		
+		foreach($properties as $property):
+		
+			$typename = ($property['type']?$property['type']:'Untitled Type');
+		
+			$this->output .= "<h3><a href='#$typename'>". $typename . "</a></h3>";
+			
+			$this->output .= "<div class='page-element-property-value-text'>".$property['value']."</div>";
+		
+		endforeach;
+		
+		$this->output .= "</div>";
+		
+		$this->output .= $comments. //display existing comments
+						 $commentForm; //display form for adding comments
+	}
+	function getOutput()
+	{
+		return $this->output;
+	}
+}
+class DatasetPage
+{
+	function __construct($content)
+	{
+		extract($content);
+		
+		//$prefix = new TitleSubmitterRating($title);
+		//$this->output = $prefix->getOutput(); //start with name, submitter and star rating
+ 		
+		$toolbar = new DAE_Toolbar($toolbar,array('tree' => false), $title);
+		$this->output .= $toolbar->getOutput(); //Add toolbar
+		
+		$this->output .=
+      "<div class=\"dataset-contents-wrapper\"><div id=\"dataset-item-container\" class=\"item-container\">"; //open left side list for data items
+		
+		if(!$set_array[key($set_array)])
+			$set_array[key($set_array)] = array();
+		
+		$this->list_builder_datasets($set_array[key($set_array)],$set_names,$i);
+		
+		$this->output .= $page_images;
+		
+		$this->output .= "</div><br style=\"clear:both;\"><div class=\"dataset-contents-base\"></div></div>"; //close list, add preview block on right
+		
+		$this->output .= $comments. //display existing comments
+						 $commentForm; //display form for adding comments
+	}
+		function list_builder_datasets(&$array,&$dataset_names,&$i)
+	{
+		foreach($array as $key => $item):
+			
+			/*if(is_array($array[$key])):
+				$name = $dataset_names[$key];
+				$icon = "dataitem-directory";
+				$this->output .= "<div id=\"dataset-$key\" class=\"dataset-item directory\">";
+        $subImages = parse_tree($key, getDAEDatabase(), Array(), 4);
+        foreach($subImages as $e){
+          //$this->output .= "<img src=\"".dae_data_get_thumb_uri($e, 'small')."\" alt=\"\">";
+          $this->output .= "<img src=\"http://dae.cse.lehigh.edu/DAE/?q=browse/dataitem/thumb/".$e."/small\" />";
+        }
+        $this->output .= "<span id=\"name-$key\" title=\"$name\" class=\"$icon item-title\">$name</span></div>";
+        $this->output .= "<div class=\"dataset-pad\" id=\"dataitem-children-$key\">";
+        $this->list_builder_datasets($array[$key],$dataset_names,$i);
+				$this->output .= "</div>";
+				$i++;
+			elseif($array[$key] == "leaf"):*/
+				$name = $dataset_names[$key];
+				$icon = "dataitem-directory";
+				$this->output .= "<div id=\"dataset-$key\" class=\"dataset-item directory\"><a href=\""
+                      .base_path()."?q=browse/dataitem/".$key."\">";
+        $subImages = parse_tree($key, getDAEDatabase(), Array(), 6);
+        foreach($subImages as $e){
+          $this->output .= '<div class="image-preview">';
+          $this->output .= "<img src=\"".dae_data_get_thumb_uri($e, 'small')."\" alt=\"\">";
+          //$this->output .= "<img src=\"http://dae.cse.lehigh.edu/DAE/?q=browse/dataitem/thumb/".$e."/small\" />";
+          $this->output .= "</div>";
+        }
+        $this->output .= "<span id=\"name-$key\" title=\"$name\" class=\"$icon item-title\">$name</span></div><div class=\"dataset-pad\" id=\"dataitem-children-$key\"></a></div>";
+				$i++;
+			
+			//endif;
+			
+			
+		endforeach;
+	}
+	function getOutput()
+	{
+		return $this->output;
+	}
+}
+class FilePage
+{
+    function __construct($content)
+	{
+		extract($content);
+		
+		//$prefix = new TitleSubmitterRating($title);
+		//$this->output = $prefix->getOutput(); //start with name, submitter and star rating
+ 		
+		$toolbar = new DAE_Toolbar($toolbar,array('tree' => false), $title);
+		$this->output .= $toolbar->getOutput(); //Add toolbar
+		
+		$this->output .= '<div class="item-container"><pre>';
+		
+		/** \todo Currently we're (stupidly) supposing the file content is in textual format. This may not always be true */
+		/** \bug Trying to display binary files may crash (or worse, compromise) the client's browser */
+		$this->output .= check_plain(file_get_contents($path));
+		
+		$this->output .= '</pre></div>';
+		
+		$this->output .= $comments. //display existing comments
+		$commentForm; //display form for adding comments
+	}
+	
+	function getOutput()
+	{
+		return $this->output;
+	}
+}
+
+class DataItemComment
+{
+	var $output;
+	
+	function addComment($info)
+	{	
+		extract($info);
+		
+		$rating = new StarRating($dataset,$stars,0);
+		$stars = $rating->getOutput();
+		
+		if($limit && strlen($body) > 1500):
+			$body = substr($body,0,1500)."... <a href=\"?q=browse/dataitem/comment/".$id."\">Read&nbsp;More</a>";
+		endif;
+		
+		// add person information link for the comment author  - xiz307
+		require_once("./".drupal_get_path('module','dae_data')."/dae_data_person.inc");
+		$person=new Person($author_id);
+		$paraStr=$person->getHTMLOutputStr('js');
+		$personStr="<a style=\"cursor:pointer\" 
+					onclick=\"jAlert(decodeURIComponent('$paraStr'),'Information about this person')\">".$person->name."</a>";
+			
+		$this->output .= "<div class=\"comment\">
+							<div class=\"comment-rating\">
+								$stars
+							</div>
+							<div class=\"comment-author\">
+								$personStr
+							</div>";
+		
+		if($helpful['total'])
+			$this->output .= "<div class=\"comment-helpful\">
+								".$helpful['yes']." of ".$helpful['total']." people found this comment helpful.
+							  </div>";
+		else
+			$this->output .= "<div class=\"comment-helpful\">
+								No ratings on this comment.
+							  </div>";
+		
+			$this->output .= "
+							<p class=\"comment-body\">
+								$body
+						  	</p>
+					  		<div class=\"comment-rate\">
+								Was this comment helpful?
+								 &nbsp;<a href=\"#\" onClick=\"helpful(1,$id);return false;\">Yes</a>
+								 &nbsp;&nbsp;<a href=\"#\" onClick=\"helpful(0,$id);return false;\">No</a>
+								 <span id=\"c-rate-loader-$id\" class=\"inline-loader\">
+								 	<img src=\"".drupal_get_path('module','dae_ui')."/images/ajax.gif\" alt=\"\"/><img src=\"".drupal_get_path('module','dae_ui')."/images/loading-dataitems.gif\" alt=\"\"/>
+								 </span>
+							  </div>
+							</div>";
+	}
+	function getOutput()
+	{
+		return $this->output;
+	}
+}
+class DataItemCommentForm
+{
+	var $output;
+	
+	function __construct($info)
+	{
+		extract($info);
+		$rating = new StarRating($id,$rating);
+		$stars = $rating->getOutput();
+		
+		$this->output = "<div class=\"comment\">
+							<div class=\"comment-rating\">
+								$stars
+							</div>
+							<div class=\"comment-author\">
+								$author
+							</div>
+							<br/>
+							$form
+						</div>";
+	}
+	function getOutput()
+	{
+		return $this->output;
+	}
+}
+class PageImageList
+{ 
+	function addPageImage($info)
+	{
+		$name = basename($info['path']);
+		$ext = explode(".",$name);
+		$icon = "dataitem-ext-". strtolower($ext[count($ext)-1])." dataitem-ext";		
+		$this->output .=
+      "<div id=\"dataitem-".$info['id']."\" class=\"dataset-item single-item\">".
+        "<div class=\"item-container\">".
+          "<a class=\"item-link\" href=\"".base_path()."?q=browse/dataitem/".$info['id']."\">".
+            "<img src=\"".$info['thumb']."\" />".
+          "</a>".
+          "<span id=\"name-".$info['id']."\" title=\"$name\" class=\"$icon item-title\">$name</span>".
+        "</div>".
+        "<div class=\"item-info\">".
+          "<img src=\"".drupal_get_path("module","dae_ui")."/images/ajax.gif\">".
+        "</div>".
+      "</div>";
+	}
+  function buildPaginNav($perPage, $total, $currentPage=1, $dataset){
+    $numPages = ceil($total/$perPage);
+    $this->paginNav = '<ul class="clear dae-data-browse-pages">';
+    if($currentPage > 1){
+      $this->paginNav .= '<li><a href="?q=browse/dataitem/'.$dataset.'/'.($currentPage-1).'" class="pagin-nav">&laquo; Previous</span>';
+    }
+    if($numPages < 10){
+      for($i = 1; $i <= $numPages; $i++){
+        if($i == $currentPage)
+          $this->paginNav .= '<li><a href="#" class="active-page">'.$i.'</a>';
+        else
+          $this->paginNav .= '<li><a href="?q=browse/dataitem/'.$dataset.'/'.$i.'">'.$i.'</a>';
+      }
+    } else {
+      $this->paginNav .= '<li><a href="?q=browse/dataitem/'.$dataset.'/1">1</a>';
+      if($currentPage <= 4) {
+        for($i = 2; $i <= 8; $i++){
+          if($i == $currentPage)
+            $this->paginNav .= '<li><a href="#" class="active-page">'.$i.'</a>';
+          else
+            $this->paginNav .= '<li><a href="?q=browse/dataitem/'.$dataset.'/'.$i.'">'.$i.'</a>';
+        }
+        $this->paginNav .= '<li>...';
+      } else if ($currentPage >= $numPages - 4) {
+        $this->paginNav .= '<li>...';
+        for($i = $numPages-7; $i <= $numPages-1; $i++){
+          if($i == $currentPage)
+            $this->paginNav .= '<li><a href="#" class="active-page">'.$i.'</a>';
+          else
+            $this->paginNav .= '<li><a href="?q=browse/dataitem/'.$dataset.'/'.$i.'">'.$i.'</a>';
+        }
+      } else {
+        $this->paginNav .= '<li>...';
+        for($i = $currentPage-2; $i <= $currentPage+3; $i++){
+          if($i == $currentPage)
+            $this->paginNav .= '<li><a href="#" class="active-page">'.$i.'</a>';
+          else
+            $this->paginNav .= '<li><a href="?q=browse/dataitem/'.$dataset.'/'.$i.'">'.$i.'</a>';
+        }
+        $this->paginNav .= '<li>...';
+      }
+      $this->paginNav .= '<li><a href="?q=browse/dataitem/'.$dataset.'/'.$numPages.'">'.$numPages.'</a>';
+    }
+  }
+	function setLimited($id,$page)
+	{
+		$this->limit = true;
+		$this->dataset = $id;
+		$this->page = $page;
+	}
+	function getOutput() {
+		return $this->output . $this->paginNav;
+	}
+}
+
+class DataItemDetails
+{
+	
+	function __construct($info)
+	{		
+		
+		$this->output .= "<ul class=\"dataitem-labels\">";
+		
+		foreach($info['label'] as $label):
+		
+			$this->output .= "<li>$label</li>";
+		
+		endforeach;
+		
+		$this->output .= "</ul>";
+		$this->output .= "<ul class=\"dataitem-meta\">";
+		
+		foreach($info['meta'] as $meta):
+		
+			$this->output .= "<li>$meta</li>";
+		
+		endforeach;
+		
+		$this->output .= "</ul>";
+
+		
+	}
+	function getOutput()
+	{
+		return $this->output;
+	}
+}
+
+
+class StarRating
+{
+
+	function __construct($dataset,$rate_info,$writable = 1,$showMyRating = true)
+	{
+		$this->build_star_rating($dataset,$rate_info,$writable,$showMyRating);
+	}
+	function build_star_rating($dataset,$rate_info,$writable,$showMyRating)
+	{	
+	
+		extract($rate_info);
+		
+		$starWidth = 92;
+		
+		$stars = sprintf("%.0f",$rating*$starWidth);
+		
+		if(!$writable)
+			$readonly = "-static";
+		if($showMyRating)
+			if($rated)
+				$class = "my_rating";
+			else
+				$class = "general_rating";
+		else
+			$class = "general_rating";
+		
+		$this->output .= "<div id=\"rate-$dataset\" class=\"rating$readonly\">
+							<div class=\"$class\" rel=\"$rated-$stars\" style=\"width:".$stars."px\"></div>
+							<div class=\"stars\">
+								<div id=\"star-1\" class=\"star$readonly\"></div>
+								<div id=\"star-2\" class=\"star$readonly\"></div>
+								<div id=\"star-3\" class=\"star$readonly\"></div>
+								<div id=\"star-4\" class=\"star$readonly\"></div>
+								<div id=\"star-5\" class=\"star$readonly\"></div>
+							</div>
+						  </div>
+							";
+	}
+	function getOutput()
+	{
+		return $this->output;
+	}
+
+}
+
+class UploadUI
+{
+	
+	function __construct($prefix)
+	{
+		$this->prefix = $prefix;
+		
+		drupal_add_css(drupal_get_path("module","dae_ui") . '/default.css');
+		drupal_add_css(drupal_get_path("module","dae_ui") . '/stylesheets/uploads.css');
+		drupal_add_js(drupal_get_path("module","dae_ui") . '/dae_ui_effects.js');
+		drupal_add_js(drupal_get_path("module","dae_ui") . '/javascript/dae_uploads.js');
+		
+		$this->output .= "<ul id=\"".$this->prefix."_list\">\n";
+	}
+	
+	function addRecord($info)
+	{
+	
+		$this->output .= "<li class=\"".$info['children']."\">
+							<div class=\"".$this->prefix."-li\">
+								<div class=\"".$this->prefix."-name ".$info['click']."\" onClick=\"".$info['onRowClick']."\">
+									<span class=\"left\">
+										".$info['image']
+										 .$info['left']."
+									</span>
+									<span class=\"actions\">
+										<input name=\"".$info['checkbox']['name']."\" type=\"checkbox\" value=\"".$info['checkbox']['value']."\" class=\"".$info['checkbox']['class']."\" onClick=\"event.stopPropagation();\"/>
+									</span>
+								</div>
+								<div class=\"".$this->prefix."-info\">";
+									
+										foreach($info['hidden'] as $info_div):
+									
+											$this->output.=	"<div class=\"".$info_div['class']."\">
+																<h4>".$info_div['title']."</h4>
+																<div class=\"".$info_div['label']['class']."\">";
+											
+											unset($info_div['label']['class']);
+																
+											foreach($info_div['label'] as $label):
+												
+												$this->output.= "$label<br/>";
+																
+											endforeach;
+											
+											$this->output.=	"</div>
+															<div class=\"".$info_div['info']['class']."\">";
+											
+											unset($info_div['info']['class']);
+											
+											foreach($info_div['info'] as $label):
+												
+												$this->output.= "$label<br/>";
+																
+											endforeach;
+											
+											$this->output.= "</div>
+															</div>";
+											
+										endforeach;
+										
+			$this->output .=		"<div class=\"clear\"></div>
+								</div>
+							</div>
+						  </li>
+						  ";
+	}
+	function getOutput()
+	{
+		return $this->output . "</ul>";
+	}
+
+}
+class TagCloud
+{
+
+	function __construct($prefix)
+	{
+		$top = $this->getMax();
+		
+		$result = db_query("select count(TAG_ID) as COUNT, VALUE from temp_assoc_tag join temp_tag on TAG_ID = ID group by TAG_ID order by VALUE");
+		
+		while($row = db_fetch_array($result)):
+		
+			$this->output .= "<span style=\"font-size:".(8+sprintf("%.0f",($row['COUNT']/$top)*15))."px\">".$row['VALUE']."</span> ";
+		
+		endwhile;
+	}
+	
+	function getOutput()
+	{
+		return "<br/>".$this->output;
+	}
+	function getMax()
+	{
+		return db_result(db_query("select count(TAG_ID), VALUE from temp_assoc_tag join temp_tag on TAG_ID = ID group by TAG_ID order by count(TAG_ID) desc limit 1"));
+	}
+
+}
+/*
+class DataUI_Old extends DAEUI
+{
+	
+	function __construct($prefix,$action = false,$color = 0)
+	{
+		$this->prefix = $prefix;
+		$this->color = $color;
+		
+		drupal_add_css(drupal_get_path("module","dae_ui") . '/default.css');
+		drupal_add_js(drupal_get_path("module","dae_ui") . '/dae_ui_effects.js');
+		
+		$this->form = false;
+		
+		if(!empty($action)):
+			$this->output .= "";
+			$this->output .= "<form name=\"flagForm\" method=\"post\" action=\"?q=browse/flag\"><input type=\"hidden\" name=\"ds\"><input type=\"hidden\" name=\"comments\"></form><ul id=\"dae-data_list\">";
+			$this->form = true;
+		endif;
+	}
+	
+	function addDownloadRecord($info)
+	{
+		$download = l("<img src=\"".drupal_get_path('module','dae_ui')."/images/download.png\" alt=\"\" />",'browse/download/'.$info['id'],array('html' => true,'attributes' => array('onClick' => 'event.stopPropagation();','title' => 'Download')));
+		$copy = l("<img src=\"".drupal_get_path('module','dae_ui')."/images/copy.png\" alt=\"\" />",'browse/copy/'.$info['id'],array('html' => true,'attributes' => array('onClick' => 'event.stopPropagation();','title' => 'Copy to My Uploads')));
+		$flag = "<a href=\"javascript:flagDataSet(".$info['id'].")\" onClick=\"event.stopPropagation();\" title=\"Flag Problem\"><img src=\"".drupal_get_path('module','dae_ui')."/images/flag.png\" alt=\"\" /></a>";
+	
+		$this->output .= "<li class=\"".$info['children']."\">
+							<div class=\"".$this->prefix."-li".$info['click']."\" onClick=\"".$info['onRowClick']."\">
+								<span class=\"left\">
+									<img src=\"".drupal_get_path('module','dae_ui')."/images/".$info['image']."\" alt=\"\" />
+									".$info['left']."
+									<span id=\"loading-".$info['id']."\" class=\"loading\"></span>
+								</span>
+								<span class=\"actions\">
+									$flag
+									$copy
+									$download
+								</span>
+							</div>
+							<div class=\"".$this->prefix."-info\">
+								".$info['hidden']."
+							</div>
+						  </li>
+						  ";
+		$this->color++;
+	}
+	function setColor($color)
+	{
+		$this->color = $color;
+	}
+	function getOutput()
+	{
+		if($this->form)
+			return $this->output . "</ul>";
+		else
+			return $this->output;
+	}
+
+}*/
+/**
+ * This function returns the first 5 images from a dataset for the thumbnail previews
+ * on the first page.
+ *
+ * @param $parent the id of the dataset
+ *
+ * @return Returns HTML markup of the images
+ *
+ */
+function dae_dataset_preview($parent) {
+  $db = getDAEDatabase();
+  $e = parse_tree($parent, $db, Array(), 5);
+  $output = '<div class="preview-thumb-container">';
+  foreach($e as $element) {
+    $output .= "<div class=\"img-container-outer\"><a class=\"img-container-inner\" href=\"".base_path()."?q=browse/dataitem/".$element."\">
+    <img src=\"".dae_data_get_thumb_uri($element, 'small')."\" alt=\"\" width=\"50\">
+    </a></div>";
+  }
+  $output .= "</div>";
+  return $output;
+}
+
+/**
+ * Runs through a directory structure to grab images for thumbnail previewing
+ * @param $root The directory to search
+ * @param $db The database (rather than calling getDAEDatabase() for every iteration)
+ * @param $e An array to store the ids of page images
+ * @param $count The number of elements to get
+ */
+function parse_tree($root, $db, $e, $count) {
+  $elements = get_page_elements($root, $db);
+  $dirs = get_directories($root, $db);
+  while(count($e) < $count && $row = $db->fetch_array($elements)) {
+    array_push($e,$row['ID']);
+  }
+  while(count($e) < $count && $d = $db->fetch_array($dirs)){
+    $e = parse_tree($d['ID'], $db, $e, $count);
+  }
+  return $e;
+}

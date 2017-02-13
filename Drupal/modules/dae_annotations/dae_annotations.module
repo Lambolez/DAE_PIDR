@@ -1,0 +1,193 @@
+<?php
+
+function dae_annotations_menu() {
+
+  $items['annotations'] = array(
+    'title' => 'Annotation Tasks',
+    'Description' => 'Manage your annotation tasks',
+    'file' => 'dae_annotations.inc',
+    'access arguments' => array('annotation tasks'),
+    'page callback' => 'annotations'
+  );
+  $items['annotations/define/info'] = array(
+    'title' => 'Define annotation task info',
+    'file' => 'dae_annotations_define.inc',
+    'access arguments' => array('annotation tasks'),
+    'page callback' => 'define_annotation_info',
+    'type' => 'MENU_CALLBACK'
+  );
+  $items['annotations/edit/info'] = array(
+    'title' => 'Edit annotation task info',
+    'file' => 'dae_annotations_edit.inc',
+    'access arguments' => array('annotation tasks'),
+    'page callback' => 'edit_annotation_info',
+    'type' => 'MENU_CALLBACK'
+  );
+  $items['annotations/edit/ui'] = array(
+    'title' => 'Edit the interface for you annotation task',
+    'file' => 'dae_annotations_edit.inc',
+    'access arguments' => array('annotation tasks'),
+    'page callback' => 'edit_annotation_ui',
+    'type' => 'MENU_CALLBACK'
+  );
+  $items['annotations/display'] = array(
+    'title' => 'Annotation Task',
+    'file' => 'dae_annotations_display.inc',
+    'access arguments' => array('annotation tasks'),
+    'page callback' => 'display_annotation',
+    'type' => 'MENU_CALLBACK'
+  );
+  $items['annotations/specification'] = array(
+    'title' => 'returns the xml spec',
+    'access arguments' => array('annotation tasks'),
+    'page callback' => 'annotation_specification',
+    'type' => 'MENU_CALLBACK'
+  );
+  $items['annotations/sql'] = array(
+    'title' => 'returns the formatted results of an sql query',
+    'access arguments' => array('annotation tasks'),
+    'page callback' => 'annotation_sql',
+    'type' => 'MENU_CALLBACK'
+  );
+  $items['annotations/params'] = array(
+    'title' => 'returns the params for the UI builder tool',
+    'access arguments' => array('annotation tasks'),
+    'page callback' => 'dae_annotation_ui_params',
+    'type' => 'MENU_CALLBACK'
+  );
+  $items['annotations/display/form'] = array(
+    'title' => 'AHAH callback for user generated forms',
+    'file' => 'dae_annotations_display.inc',
+    'access arguments' => array('annotation tasks'),
+    'page callback' => 'display_form_ahah',
+    'type' => 'MENU_CALLBACK'
+  );
+
+  return $items;
+}
+
+function dae_annotations_perm() {
+  return array('annotation tasks');
+}
+
+/**
+ * Sets params for creating the annotation tsk building tool.
+ * @param string {$name} the annotation name
+ * @param int {$dataitem} the dataitem id
+ * $param bool {$exists} false if this is a new ui, true if
+ *    editing an existing ui
+ *
+ */
+function dae_annotation_ui_params($aid){
+    $info = getAnnotationInfo($aid);
+    $resp = array(
+      'status' => 1,
+      'console' => '#annotation-gui-console',
+      'output' => '#annotation-markup-output',
+      'widgetTypes' => array(
+        'Static Text',
+        'Check Box',
+        'Radio',
+        'Text Area'
+      ),
+      'toolsAvail' => array(
+        'rectangle', 'circle'
+      ),
+      'annotation_name' => $info['annotation_name'],
+      'annotation_id' => $aid,
+      "image" => annotation_sql_query($info['user_query'], 1),
+      "query" => $info['user_query']
+    );
+    if(!empty($info['specification'])) {
+      $resp['exists'] = true;
+    }
+  return json_encode($resp);
+}
+
+function getAnnotationInfo($aid){
+  $r = db_query('
+    SELECT annotation_name, user_query, annotation_id, specification
+    FROM {annotation_ui_storage}
+    WHERE annotation_id = ' . $aid
+  );
+  return db_fetch_array($r);
+}
+
+function annotationNameExists($n) {
+  global $user;
+  $uid = $user->uid;
+  $r = db_query('
+    SELECT count(*) as count
+    FROM {annotation_ui_storage}
+    WHERE annotation_name = \'' . $n . '\'
+    AND creator = ' . $uid
+  );
+  
+  $num = db_fetch_array($r);
+  
+  return $num['count'];
+}
+
+/**
+ * AJAX callback to retrieve annotation task XML spec
+ */
+function annotation_specification(){
+  $r = db_fetch_array(db_query('
+    SELECT specification FROM {annotation_ui_storage}
+    WHERE annotation_id = ' . arg(2)
+  ));
+  drupal_set_header('Content-Type: text/xml; charset: utf-8');
+  $output = '<?xml version="1.0" ?>' . $r['specification'];
+  printf($output);
+}
+
+/**
+ * Runs the user created sql query
+ */
+function annotation_sql_query($sql, $itemNo = null) {
+  $db = getDAEdatabase();
+  if($itemNo){
+    $suffix = "where r = $itemNo";
+  } else {
+    $suffix = "where r <= 25";
+  }
+  $query = "select id from (select row_number() over(order by id) as r, id from ($sql)) $suffix";
+  $data = array();
+  $result = $db->q($query, array());
+  while($row = $db->fetch_array($result)){
+    array_push($data, $row['ID']);
+  }
+  return (sizeof($data) == 1) ? $data[0] : $data;
+}
+
+function annotation_sql_query_count($sql) {
+  $db = getDAEdatabase();
+  $numRows = $db->r("select count(*) from ($sql)", array());
+  return $numRows;
+}
+
+/**
+ * JSON callback to retrieve query results
+ */
+function annotation_sql() {
+  if(isset($_POST['query'])){
+    $data = annotation_sql_query($_POST['query']);
+    echo json_encode($data);
+  }
+}
+
+/**
+ * Checks to see if the current user is allowed to edit
+ * @todo only checks for creator
+ **/
+function canEdit($aid) {
+  global $user;
+  $r = db_fetch_array(db_query('
+    select creator
+    from {annotation_ui_storage}
+    where annotation_id ='.$aid
+  ));
+  return ($r['creator'] == $user->uid);
+}
+
+?>

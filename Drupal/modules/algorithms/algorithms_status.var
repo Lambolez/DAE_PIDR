@@ -1,0 +1,6 @@
+<?php
+define(RUN_FAILED, -1);
+define(RUN_COMPLETE, 1);
+define(RUN_RUNNING,2);
+define(RUN_COMPLETE_DELETED,3);
+define(RUN_FAILED_DELETED,4);

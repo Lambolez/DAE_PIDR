@@ -1,0 +1,98 @@
+<?php
+
+/**
+ * The DAE algorithm services.
+ */
+ 
+require_once("./".drupal_get_path('module','daedatabase')."/daedatabase_db.inc");
+
+/**
+ * Implementation of hook_perm().
+ */
+function dae_service_algorithms_perm() {
+  return array('run algorithms', 'access services');
+}
+
+/**
+ * This is the service authorization handler.
+ * 
+ * Currently this is only a stub.
+ * 
+ * @TODO Set up complete authentification handling for Web Services
+ * 
+ */
+function dae_service_algorithms_auth($algoId) {
+    $_SESSION['algoId'] = $algoId; 
+    //return (user_access('run algorithms') && user_access('access services') && user_access('download data'));
+    return true;
+}
+
+/**
+ * Implementation of hook_service() for algorithm convert.
+ */
+function dae_service_algorithms_service() {
+
+    $db = getDAEDatabase();
+    global $callbackFunctionArray;
+    
+    $algorithms = $db->q('select ID from ALGORITHM where STATUS = 2',array());
+    $serviceList = array();
+    
+    while($row = $db->fetch_array($algorithms)) {
+    
+        $algoId = $row['ID'];
+    
+        $algoInfo = retrieveAlgortithmInfo($algoId);
+        $algoString = $algoInfo['NAME'].'_'.$algoInfo['VERSION'];
+        $cleanAlgoString = preg_replace('/\./','-',$algoString);
+     
+    	/*
+     	* Cf. note concerning the #args field for the service definition.
+     	* Eventually this line should be uncommented, one day (when the service
+     	* handler can get multiple arguments)
+     	* 
+     	* Also note that the 'access callback' function sets a session variable that
+     	* will allow the generic callback function to know what algorithm parameters
+     	* to expect. This is important so that the callback function can be fully generic 
+     	* on the one side, and that no other intervention is needed when new algorithms
+     	* are added as a service. 
+     	*/
+        //$SOAPInputType = retrieveAlgorithmSOAPInputTypes($algoId,'','',true);
+    
+        $serviceList[] =
+            array(
+      			'#method'           => "DAE Algorithm.$cleanAlgoString", // service name
+      			'#callback'         => "callback", // service handler
+      			'#access callback'  => "dae_service_algorithms_auth",
+                '#access arguments' => array($algoId),
+      			'#file'             => array('file' => 'inc', 'module' => 'dae_service_algorithms'),
+            	/* The following line should not be here ! This is due to some kind of bug with either the
+             	* Drupal Services module, the Services module or nusoap - or a combination
+             	* 
+             	* Apparently only one argument gets passed to the service callback function.
+             	* Therefore, all arguments need to be passed in a wrapper class, just like for the
+             	* output.
+             	*/
+            	'#args'				=> array(
+                                        array('#name'        =>'input', 
+                                        	  '#type'        =>'dae_'.$algoString.'_Input_'.$algoId, 
+                                        	  '#description' => t('Set of input parameters for DAE algorithm '.$algoString)),
+                                        array('#name'        => 'username',
+          									  '#type'           => 'string',
+          									  '#description'    => t('A valid username.')),
+                                        array('#name'           => 'password',
+          									  '#type'           => 'string',
+          									  '#description'    => t('A valid password.')),
+                                        ),
+      			'#return'           => 'dae_'.$algoString.'_Output_'.$algoId,
+      			'#help'             => t($algoInfo['DESCRIPTION']),
+      			'#title'			  => 'DAE'
+            );
+            
+    }
+    
+    //drupal_set_message(print_r($serviceList),warning);
+    
+    return $serviceList;
+}
+

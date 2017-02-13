@@ -1,0 +1,27 @@
+# Ocr Results File. Created by GNU Ocrad version 0.16
+source file IMG_2508.JPG.pgm
+total text blocks 1
+text block 1 0 0 640 480
+lines 4
+line 1 chars 1 height 10
+638  23  1 10; 1, '|'0
+line 2 chars 7 height 89
+111  62  4  4; 0
+115  50 73 106; 1, ' '0
+188  51 69 106; 1, 'R'0
+259  49 74 109; 2, 'O'1, 'o'0
+338  50 69 106; 1, 'P'0
+412  50 60 106; 0
+478  49 67 107; 1, 'g'0
+line 3 chars 4 height 159
+121 166 78 155; 1, 'F'0
+205 163 108 162; 2, 'O'1, 'o'0
+322 165 110 162; 2, 'O'1, 'o'0
+441 166 108 159; 0
+line 4 chars 6 height 99
+122 329 60 96; 1, 'p'0
+187 330 61 98; 1, 'R'0
+253 330 67 101; 2, 'O'1, 'o'0
+327 332 74 99; 1, 'N'0
+407 333 68 99; 1, 'T'0
+478 332 68 102; 1, 'G'0

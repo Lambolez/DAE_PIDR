@@ -1,0 +1,223 @@
+/* GENERAL STYLES */
+
+.dae_data-row
+{
+	min-height:25px;
+	padding:5px 0 5px 5px;
+	overflow: hidden;
+	margin:0;
+	
+}
+.click
+{
+	cursor: pointer;
+}
+.dae_data-li, .dae-run-li, .dae-upload-li
+{
+	min-height:28px;
+	text-align: right;
+	border:1px solid #ccc;
+	background:#F0EEED;
+	padding-top:6px;
+}
+.dae_data-li img, .dae-run-li img
+{
+	vertical-align: middle;
+	padding: 0 6px 2px 4px;
+	max-width:20px;
+	max-height:24px;
+}
+.dae-upload-li img
+{
+	vertical-align: middle;
+	padding: 0 6px 2px 4px;
+	max-width:24px;
+	max-height:24px;
+}
+.dae_data-li h4, .dae-run-li h4, .dae-upload-li h4
+{
+	font-size:12px;
+	font-weight: bold;
+}
+.actions
+{
+	margin-right:5px;
+}
+.actions img
+{
+	max-width:18px;
+	max-height:18px;
+	padding:3px;
+	
+}
+.actions img:hover
+{
+	background:#ccc;
+}
+.dae_data-info
+{
+	display: none;
+	text-align: left;
+	padding-left:20px;
+}
+ .dae-run-info, .dae-upload-info
+{
+	display:none;
+	text-align:left;
+	margin:6px 5px 5px 5px;
+	border-top:1px solid #ccc;
+	padding-top:5px; 	
+}
+.algorithm_run_input_files, .algorithm_run_output_files, .algorithm_run_stats
+{
+	float:left;
+	min-width: 200px;
+}
+.upload_info_basics, .upload_info, .upload_labels, .upload_info_image, .algorithm_run_stats_info, .algorithm_run_stats_labels
+{
+	display:inline;
+	float:left;
+	margin-right:15px;
+}
+.clear
+{
+	clear:both;
+	height:1px;
+	width:100%;
+}
+.left
+{
+	float:left;
+}
+.collap, .expand, .data-leaf
+{
+	padding-bottom:0;
+	padding-top:0;
+	margin-top:5px;
+	margin-bottom:0;
+}
+.collap
+{
+	background:transparent url('../../files/color/garland-f8885627/menu-collapsed.gif') no-repeat 0px 1em;
+}
+.expand
+{
+	background:transparent url('../../files/color/garland-f8885627/menu-expanded.gif') no-repeat 0px 1em;
+}
+.data-leaf
+{
+	background:transparent url('../../files/color/garland-f8885627/menu-leaf.gif') no-repeat 0px 1em;
+}
+.loading
+{
+	margin-left:10px;
+	display: none;
+}
+.loading img
+{
+	vertical-align: middle;
+}
+
+/* STYLES FOR MY RUNS */
+
+.dae-run-failed
+{
+	font-size: 10px;
+	font-weight: bold;
+	color:#700;
+	display: inline;
+	margin-right:5px;
+}
+.algorithm_run_running img
+{
+	max-width:18px;
+	max-height:18px;
+	padding:3px;
+	margin:0 5px 0 3px;
+}
+.dae-run-failed img
+{
+	max-width:18px;
+	max-height:18px;
+	padding:3px;
+	margin-left:3px;
+}
+.algorithm_run_complete
+{
+	font-size:10px;
+	font-weight: bold;
+	color:#070;
+	display: inline;
+	margin-right:3px;
+}
+
+
+/* STYLES FOR MY UPLOADS */
+
+#hd-uploads_batch_operations
+{
+	margin:4px 0 6px 0;
+}
+#hd-uploads_batch_operations a
+{
+	margin-right:10px;
+	font-size:11px;
+}
+#hd-uploads_batch_operations a:hover
+{
+	cursor: pointer;
+}
+#batch_move_uploads
+{
+	padding-left:20px;
+	background:url('images/move.png') no-repeat 0px 0em;	
+}
+#batch_delete_uploads
+{
+	padding-left:20px;
+	background:url('images/delete.png') no-repeat 0px 0em;	
+}
+#batch_download_uploads
+{
+	padding-left:20px;
+	background:url('images/download_upload.png') no-repeat 0px -.2em;	
+}
+#hd-uploads_batch_selectors
+{
+	font-size:11px;
+}
+#hd-move_to_options
+{
+	position: absolute;
+	margin-left:10px;
+	z-index: 1;
+	background:url('images/dropdown.png');
+	list-style-type: none;
+	min-width: 120px;
+	display: none;
+}
+#hd-move_to_options li
+{
+	cursor: pointer;
+	padding:3px 20px 3px 8px;
+	border-bottom:1px solid #eee;
+}
+#hd-move_to_options li:hover
+{
+	background:#999;
+}
+#hd-upload-file
+{
+	background:url('images/upload.png') no-repeat 0px -.2em;
+	
+	
+}
+#hd-make-subdirectory
+{
+	background:url('images/add_16.png') no-repeat 0px -.2em;
+}
+.icon-link
+{
+	padding:2px 0 2px 20px;
+	margin-right:10px;
+}

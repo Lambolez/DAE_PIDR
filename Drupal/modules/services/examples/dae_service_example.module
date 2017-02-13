@@ -1,0 +1,57 @@
+<?php
+
+/**
+ * The DAE algorithm services.
+ */
+ 
+
+/**
+ * Implementation of hook_perm().
+ */
+function dae_service_io_perm() {
+  return array();
+}
+
+/**
+ * Implementation of hook_service().
+ */
+function dae_service_io_service() {
+
+  return array(
+    // file.get
+    array(
+      '#method'           => 'DAE Example.io', // service name
+      '#callback'         => 'dae_service_io', // service operation
+      '#file'             => array('file' => 'inc', 'module' => 'dae_service_io'),
+      '#args'             => array(
+        array(
+          '#name'           => 'name',
+          '#type'           => 'string',  // The type of input
+          '#description'    => 'algorithm input',
+        ),
+      ),
+      '#return'           => 'string', // The type of output
+      '#help'             => t('Service with input and output.')
+    ),
+    array(
+      '#method'           => 'DAE Example.o', // service name
+      '#callback'         => 'dae_service_o', // service operation
+      '#file'             => array('file' => 'inc', 'module' => 'dae_service_o'),
+      '#args'             => array(
+        
+      ),
+      '#return'           => 'string', // The type of output
+      '#help'             => t('Service with output only.')
+    ),
+    array(
+      '#method'           => 'DAE Example.noio', // service name
+      '#callback'         => 'dae_service_noio', // service operation
+      '#file'             => array('file' => 'inc', 'module' => 'dae_service_noio'),
+      '#args'             => array(
+        
+      ),
+      //'#return'           => 'string', // The type of output
+      '#help'             => t('Service without any input nor output.')
+    ),
+  );
+}

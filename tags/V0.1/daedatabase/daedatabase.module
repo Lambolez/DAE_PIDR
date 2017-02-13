@@ -1,0 +1,31 @@
+<?php
+// $Id:$
+
+/**
+ * @file daedatabase.module
+ *
+ */
+
+require_once('daedatabase_db.inc');
+
+function daedatabase_menu() 
+{
+   $items = array(); 
+   
+   $items['admin/settings/daedatabase'] = array (
+	'title' => 'DAE Database Settings',
+	'description' => 'Configure DAE database settings.',
+        'access arguments' => array('administer site configuration'),
+    	'page callback' => 'drupal_get_form',
+    	'page arguments' => array('daedatabase_admin'),
+    	'file' => 'daedatabase.admin.inc',
+  );
+
+  return $items;
+}
+
+
+function daedatabase_perm()
+{
+	return array('modify DAE settings');
+}

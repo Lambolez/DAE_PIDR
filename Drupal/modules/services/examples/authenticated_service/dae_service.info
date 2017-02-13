@@ -1,0 +1,10 @@
+; $Id: $
+core            = "6.x"
+dependencies[]  = services
+description     = "Provides a DAE service example using authentication."
+name            = "DAE Authenticaded Service Example"
+package         = "DAE Service Examples"
+; Information added by drupal.org packaging script on 2010-05-17
+version = "6.x-0.0"
+
+

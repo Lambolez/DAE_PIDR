@@ -1,0 +1,5 @@
+;$Id:$
+name = Example Module
+description = "This module serves as an entry point for new developers to get used to the Drupal PhP framework."
+core = 6.x
+package = DAE Modules

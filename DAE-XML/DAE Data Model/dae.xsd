@@ -1,0 +1,239 @@
+<?xml version="1.0"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+<!-- definition of simple elements -->
+<xs:element name="id" type="xs:string"/>
+<xs:element name="name" type="xs:string"/>
+<xs:element name="description" type="xs:string"/>
+<xs:element name="value" type="xs:string"/>
+<xs:element name="width" type="xs:float" />
+<xs:element name="height" type="xs:float" />
+
+<!-- definition of complex elements -->
+<xs:element name="metadata">
+<xs:complexType>
+    <xs:all>
+	  <xs:element ref="page_image" minOccurs="0" maxOccurs="unbounded" />
+      <xs:element ref="dataset" minOccurs="0" maxOccurs="unbounded" />
+	  <xs:element ref="file" minOccurs="0" maxOccurs="unbounded" />
+	  <xs:element ref="copyright" minOccurs="0" maxOccurs="unbounded" />
+    </xs:all>
+  </xs:complexType>
+</xs:element>
+
+<xs:element name="page_image">
+  <xs:complexType>
+    <xs:all>
+      <xs:element ref="id" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="path" type="xs:string" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="hdpi" type="xs:float" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="vdpi" type="xs:float" minOccurs="0" maxOccurs="1"/>
+	  <xs:element name="skew" type="xs:float" minOccurs="0" maxOccurs="1"/>
+	  <xs:element ref="width" minOccurs="0" maxOccurs="1"/>
+	  <xs:element ref="height" minOccurs="0" maxOccurs="1"/>
+	  <xs:element ref="copyright_list" minOccurs="0" maxOccurs="1"/>
+	  <xs:element ref="image_dataset_list" minOccurs="0" maxOccurs="1" />
+	  <xs:element ref="type_list" minOccurs="0" maxOccurs="1" />
+	  <xs:element ref="contributor_list" minOccurs="0" maxOccurs="1" />
+	  <xs:element ref="page_element_list" minOccurs="0" maxOccurs="1" />
+    </xs:all>
+  </xs:complexType>
+</xs:element>
+
+<xs:element name="contributor_list">
+  <xs:complexType>
+    <xs:all>
+	  <xs:element ref="contributor_list_item" minOccurs="0" maxOccurs="unbounded" />
+    </xs:all>
+  </xs:complexType>
+</xs:element>
+
+<xs:element name="contributor_list_item">
+  <xs:complexType>
+    <xs:all>
+      <xs:element name="person_id" type="xs:string" minOccurs="1" maxOccurs="1"/>
+    </xs:all>
+  </xs:complexType>
+</xs:element>
+
+<xs:element name="page_element_list">
+  <xs:complexType>
+    <xs:all>
+	  <xs:element ref="page_element_list_item" minOccurs="0" maxOccurs="unbounded" />
+    </xs:all>
+  </xs:complexType>
+</xs:element>
+
+<xs:element name="page_element_list_item">
+  <xs:complexType>
+    <xs:all>
+      <xs:element ref="id" minOccurs="0" maxOccurs="1"/>
+	  <xs:element ref="description" minOccurs="0" maxOccurs="1"/>
+	  <xs:group ref="rectangle_boundary"/>
+	  <xs:element ref="copyright_list" minOccurs="0" maxOccurs="1"/>
+	  <xs:element ref="dataset_list" minOccurs="0" maxOccurs="1" />
+	  <xs:element ref="type_list" minOccurs="0" maxOccurs="1" />
+	  <xs:element ref="value_list" minOccurs="0" maxOccurs="1" />
+	  <xs:element ref="contributor_list" minOccurs="0" maxOccurs="1" />
+	  <xs:element ref="boundary_list" minOccurs="0" maxOccurs="1" />
+    </xs:all>
+  </xs:complexType>
+</xs:element>
+
+<xs:group name="rectangle_boundary">
+  <xs:all>
+    <xs:element ref="width" minOccurs="1" maxOccurs="1"/>
+	<xs:element ref="height" minOccurs="1" maxOccurs="1"/>
+	<xs:element name="topleftx" type="xs:float" minOccurs="1" maxOccurs="1"/>
+	<xs:element name="toplefty" type="xs:float" minOccurs="1" maxOccurs="1"/>
+  </xs:all>
+</xs:element>
+	  
+<xs:element name="boundary_list">
+  <xs:complexType>
+    <xs:all>
+	  <xs:element ref="boundary_list_item" minOccurs="0" maxOccurs="unbounded" />
+    </xs:all>
+  </xs:complexType>
+</xs:element>
+
+<xs:element name="boundary_list_item">
+  <xs:complexType>
+    <xs:all>
+      <xs:element name="type" type="xs:string" minOccurs="0" maxOccurs="1"/>
+	  <xs:element name="value" type="xs:string" minOccurs="1" maxOccurs="1"/>
+	  <xs:element ref="description" minOccurs="0" maxOccurs="1"/>
+    </xs:all>
+  </xs:complexType>
+</xs:element>
+
+<xs:element name="value_list">
+  <xs:complexType>
+    <xs:all>
+	  <xs:element ref="value_list_item" minOccurs="0" maxOccurs="unbounded" />
+    </xs:all>
+  </xs:complexType>
+</xs:element>
+
+<xs:element name="value_list_item">
+  <xs:complexType>
+    <xs:all>
+      <xs:element ref="id" minOccurs="0" maxOccurs="1"/>
+	  <xs:element name="value" type="xs:string" minOccurs="1" maxOccurs="1"/>
+	  <xs:element ref="description" minOccurs="0" maxOccurs="1"/>
+	  <xs:element ref="copyright_list" minOccurs="0" maxOccurs="1"/>
+	  <xs:element ref="dataset_list" minOccurs="0" maxOccurs="1" />
+	  <xs:element ref="type_list" minOccurs="0" maxOccurs="1" />
+	  <xs:element ref="contributor_list" minOccurs="0" maxOccurs="1" />
+	  <xs:element ref="property" minOccurs="0" maxOccurs="1" />
+    </xs:all>
+  </xs:complexType>
+</xs:element>
+
+<xs:element name="property">
+  <xs:complexType>
+    <xs:all>
+      <xs:element ref="id" minOccurs="1" maxOccurs="1"/>
+	  <xs:element ref="name" minOccurs="0" maxOccurs="1"/>
+	  <xs:element ref="description" minOccurs="0" maxOccurs="1"/>
+	  <xs:element ref="type_list" minOccurs="0" maxOccurs="1" />
+    </xs:all>
+  </xs:complexType>
+</xs:element>
+
+<xs:element name="type_list">
+  <xs:complexType>
+    <xs:all>
+	  <xs:element ref="type_list_item" minOccurs="0" maxOccurs="unbounded" />
+    </xs:all>
+  </xs:complexType>
+</xs:element>
+
+<xs:element name="type_list_item">
+  <xs:complexType>
+    <xs:all>
+      <xs:element ref="id" minOccurs="1" maxOccurs="1"/>
+	  <xs:element name="name" type="xs:string" minOccurs="1" maxOccurs="1"/>
+	  <xs:element name="description" type="xs:string" minOccurs="0" maxOccurs="1"/>
+    </xs:all>
+  </xs:complexType>
+</xs:element>
+
+<xs:element name="dataset_list">
+  <xs:complexType>
+    <xs:all>
+	  <xs:element ref="dataset_list_item" minOccurs="0" maxOccurs="unbounded" />
+    </xs:all>
+  </xs:complexType>
+</xs:element>
+
+<xs:element name="dataset_list_item" type="idType" />
+
+<xs:element name="image_dataset_list">
+  <xs:complexType>
+    <xs:all>
+	  <xs:element ref="image_dataset_list_item" minOccurs="0" maxOccurs="unbounded" />
+    </xs:all>
+  </xs:complexType>
+</xs:element>
+
+<xs:element name="image_dataset_list_item" type="idType" />
+
+<xs:element name="copyright_list">
+  <xs:complexType>
+    <xs:all>
+	  <xs:element ref="copyright_list_item" minOccurs="0" maxOccurs="unbounded" />
+    </xs:all>
+  </xs:complexType>
+</xs:element>
+
+<xs:element name="copyright_list_item" type="idType" />
+
+<xs:element name="dataset">
+	<xs:complexType>
+      <xs:all minOccurs="0" maxOccurs="1">
+        <xs:element ref="id" />
+        <xs:element ref="name" />
+	    <xs:element ref="copyright_list" />
+	    <xs:element ref="associating_dataset_list" />
+	    <xs:element ref="type_list" />
+      </xs:all>
+    </xs:complexType>
+</xs:element>
+
+<xs:element name="associating_dataset_list">
+	<xs:complexType>
+      <xs:all>
+	    <xs:element ref="associating_dataset_list_item" minOccurs="0" maxOccurs="unbounded" />
+      </xs:all>
+    </xs:complexType>
+</xs:element>
+
+<xs:element name="associating_dataset_list_item" type="idType" />
+
+<!-- declare a file type to be reused for both file and copyright -->
+<xs:complexType name="fileType">
+  <xs:all>
+    <xs:element ref="id" minOccurs="1" maxOccurs="1"/>
+    <xs:element name="path" type="xs:string" minOccurs="1" maxOccurs="1">
+	  <xs:attribute name="html" type="xs:boolean" />
+	</xs:element>
+	<xs:element ref="copyright_list" minOccurs="0" maxOccurs="1"/>
+	<xs:element ref="dataset_list" minOccurs="0" maxOccurs="1" />
+	<xs:element ref="type_list" minOccurs="0" maxOccurs="1" />
+	<xs:element ref="contributor_list" minOccurs="0" maxOccurs="1" />
+  </xs:all>
+</xs:complexType>
+
+<!-- declare an id type to be reused by elements that only need one single id sub-element -->
+<xs:complexType name="idType">
+  <xs:all>
+    <xs:element ref="id" minOccurs="1" maxOccurs="1" />
+  </xs:all>
+</xs:complexType>
+	
+<xs:element name="file" type="fileType" />
+
+<xs:element name="copyright" type="fileType" />
+
+</xs:schema>

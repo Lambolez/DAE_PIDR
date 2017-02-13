@@ -1,0 +1,105 @@
+<?php
+// $Id:$
+
+/**
+ * @file show_stat.module
+ * @author  Weidong Chen
+ * @version 1.0
+ *
+ * \brief Provides the Drupal hooks for module show_stat.
+ *
+ * This module is to extract various statistics from the database and displays them
+ * on the right side of the banner.  For this to work, in addition to enabling
+ * the module, a snippet of code has also been added to the page.tpl.php of 
+ * the theme folder (included here as change_page.tpl.php).
+ *
+ * 
+ * @section LICENSE
+ * 
+ *  This file is part of the DAE Platform Project (DAE).
+ *
+ *  DAE is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  DAE is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with DAE.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+ 
+/**
+* \brief Default Drupal security hook function
+*
+* This function declares the what new Drupal access rights are used by this module.
+* In order to access the module, the user should have 'show_stat content' rights.
+*
+*/
+function show_stat_perm() {
+  return array('access show_stat content');
+} 
+
+/**
+* \brief Default Drupal block hook function
+*
+* This function presents the data to be displayed. 
+* It queries the repository database to retrieve:
+*  - the number of page_images,
+*  - the number of data_items,
+*  - the number of algorithms
+*  It also does a quick and dirty estimation of the volume
+*  of image data hosted by the repository. This estimation is 
+*  approximate since it combines the storage of both production
+*  and experimental datasets. 
+*
+*/
+function show_stat_block($op = 'list', $delta = 0, $edit = array()) {  
+  if ($op == "list") {
+    // Generate listing of blocks from this module, for the admin/block page
+    $block = array();
+    $block[0]["info"] = t('Show Stat');
+    return $block;
+  } 
+  else if ($op == 'view') {
+    $block_content = '';
+
+
+	$query_image="SELECT count(*) FROM PAGE_IMAGE";
+	$query_item="SELECT count(*) FROM DATA_ITEM";
+	$query_algo="SELECT COUNT(*) FROM ALGORITHM where STATUS = 2";
+	$db = getDAEDatabase();
+
+    $count_item = number_format($db->r($query_item,array()));
+   	$count_img=number_format($db->r($query_image,array()));
+   	$count_alg=number_format($db->r($query_algo,array()));
+
+    $database_size="";
+	$dir='/dae/database/'.variable_get('dae_db_name','').'-upload';
+    if(is_dir($dir)){
+		$size_str=`df -h $dir`;
+		$fold_size= preg_split("/\s+/", $size_str);
+		$database_size=$fold_size[9];
+	}
+/*
+	$dir='/dae/database/'.variable_get('dae_db_name','').'-generated';
+	if(is_dir($dir)){
+		$size_str=`df -h $dir`;
+		$fold_size= preg_split("/\s+/", $size_str);
+		$database_size+="/" . $fold_size[9];
+	}
+*/
+    $block_content .="Currently hosting<br \>$count_img Document Images ($database_size)<br \>$count_alg Algorithms<br \>$count_item Data Items<br \>";
+
+    // set up the block
+    $block['subject'] = '';
+    $block['content'] = t($block_content);
+    return $block;
+  }
+}  //_block
+
+

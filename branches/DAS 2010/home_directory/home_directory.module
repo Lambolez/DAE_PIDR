@@ -1,0 +1,631 @@
+<?php
+// $Id:$
+
+/**
+ * @file home_directory.module
+ *
+ * The home_directory module creates user directories and allows creation of subdirectories.
+ */
+
+ 
+require_once("home_directory_uploads.var");
+
+/**
+ * Implementation of hook_menu().
+ */
+ 
+function home_directory_init()
+{
+	drupal_add_css(drupal_get_path("module","home_directory") . '/default.css');
+	drupal_add_js(drupal_get_path("module","home_directory") . '/home_directory.js');
+}
+
+function home_directory_menu() 
+{
+  $items = array();
+
+	$items['uploads'] = array(
+	'title' => 'My Uploads',
+	'page callback' => 'home_directory_uploads',
+	'file' => 'home_directory_uploads.inc',
+	'access arguments' => array('access uploads'),
+	);
+	$items['uploads/commit'] = array(
+	'title' => 'Commit Data',
+	'page callback' => 'home_directory_commit',
+	'access arguments' => array('commit data'),
+	);
+	$items['uploads/batch'] = array(
+	'title' => 'Batch Operations',
+	'page callback' => 'home_directory_run_batch',
+	'file' => 'home_directory_batch.inc',
+	'access arguments' => array('access uploads'),
+	'type' => 'MENU_CALLBACK'
+	);
+	$items['runs'] = array(
+	'title' => 'My Runs',
+	'page callback' => 'home_directory_runs',
+	'file' => 'home_directory_runs.inc',
+	'access arguments' => array('access runs'),
+	);
+	$items['getThumb'] = array(
+	'title' => 'Thumb',
+	'page callback' => 'home_directory_thumb',
+	'access arguments' => array('access uploads'),
+	'type' => 'MENU_CALLBACK'
+	);
+	$items['getFullSize'] = array(
+	'title' => 'Thumb',
+	'page callback' => 'home_directory_fullsize',
+	'access arguments' => array('access uploads'),
+	'type' => 'MENU_CALLBACK'
+	);
+	$items['getFile'] = array(
+	'title' => 'Download',
+	'page callback' => 'home_directory_download',
+	'access arguments' => array('access uploads'),
+	'type' => 'MENU_CALLBACK'
+	);
+	$items['getRunInfo'] = array(
+	'title' => 'Run Info',
+	'page callback' => 'home_directory_get_run_info',
+	'file' => 'home_directory_runs.inc',
+	'access arguments' => array('access runs'),
+	'type' => 'MENU_CALLBACK'
+	);
+	$items['admin/settings/home_directory'] = array (
+	'title' => 'Home Directory Settings',
+	'description' => 'Configure home directory settings.',
+    'access arguments' => array('administer site configuration'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('home_directory_admin'),
+    'file' => 'home_directory.admin.inc',
+	);
+	$items['upload'] = array (
+	'title' => 'Upload',
+	'description' => 'Upload Data.',
+    'access arguments' => array('upload data'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('home_directory_upload'),
+    'type' => 'MENU_CALLBACK'
+	);
+	$items['upload/delete'] = array (
+	'title' => 'Delete Data',
+	'description' => 'Delete Data',
+    'page callback' => 'home_directory_delete',
+	'access arguments' => array('delete data'),
+	'type' => 'MENU_CALLBACK'
+	);
+	$items['upload/mkdir'] = array (
+	'title' => 'Make Directory',
+	'description' => 'Make a new directory',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('home_directory_mkdir'),
+	'access arguments' => array('upload data'),
+	'type' => 'MENU_CALLBACK'
+	);
+	$items['upload/rmdir'] = array (
+	'title' => 'Remove Directory',
+	'description' => 'Remove a directory',
+    'page callback' => 'home_directory_rmdir',
+	'access arguments' => array('delete data'),
+	'type' => 'MENU_CALLBACK'
+	);
+	$items['upload/move'] = array (
+	'title' => 'Move a file',
+	'description' => 'Move a file',
+    'page callback' => 'home_directory_move',
+	'access arguments' => array('upload data'),
+	'type' => 'MENU_CALLBACK'
+	);
+    return $items;
+}
+
+
+/**
+ * Implementation of hook_user().
+ */
+function home_directory_user($op, &$edit, &$account, $category = NULL)
+{
+ 	$userDataDir = variable_get('home_directory_userdata', '');
+ 	
+ 	require_once("./".drupal_get_path('module','daedatabase')."/daedatabase_db.inc");
+ 	
+ 	$db = getDAEDatabase();
+ 	switch($op){
+ 	
+ 	case "insert":
+ 		mkdir($userDataDir.$account->uid);
+ 		mkdir($userDataDir.$account->uid."/uploads",0700);
+ 		mkdir($userDataDir.$account->uid."/runs",0700);
+ 		update_sql("insert into {user_storage} values(".$account->uid .",0)");
+ 		/**
+ 		* \todo This query may fail if account already exists.
+ 		**/
+ 		$db->q("insert into PERSON values(".$account->uid.", '". $account->mail ."')");
+ 		break;
+ 	case "delete":
+ 		shell_exec("rm -r ".$userDataDir.$account->uid);
+ 		break;
+ 	}
+}
+/**
+ * Implementation of thumb getter().
+ */
+function home_directory_content_type($ext,$default = "text/plain")
+{
+	switch($ext)
+	{
+  		case "png": $content="image/png"; break;
+  		case "jpeg":
+  		case "jpg": $content="image/jpg"; break;
+  		case "gif": $content="image/gif"; break;
+  		case "bmp": $content="image/bmp"; break;
+  		case "xml": $content="txt/xml"; break;
+  		case "txt": $content="text/plain"; break;
+  		case "pdf": $content="application/pdf"; break;
+  		case "pbm": $content="image/x-portable-bitmap"; break;
+  		case "tif":
+  		case "tiff": $content="image/tiff"; break;
+  		case "zip": $content="application/zip"; break;
+  		case "gz":  $content="application/x-zip"; break;
+  		  		
+  		default: $content=$default;
+	}
+	return $content;
+}
+function home_directory_get_filename_from_path($file)
+{
+	$file = explode("/",$file);
+	end($file);
+	return $file[key($file)];
+}
+function home_directory_get_path_to_file_dir($file)
+{
+	$file = explode("/",$file);
+	end($file);
+	unset($file[key($file)]);
+	$file = implode("/",$file);
+	return $file;
+}
+function home_directory_get_file_extension($file)
+{
+	$file = explode(".",$file);
+	end($file);
+	return $file[key($file)];
+}
+function home_directory_file_uploads_exists($file)
+{
+	global $uploads;
+	return is_file($uploads.$file);
+}
+function home_directory_fullsize()
+{
+	home_directory_thumb();
+}
+function home_directory_thumb()
+{
+	global $uploads;
+	$loc = arg();
+	unset($loc[0]);
+	
+	$path = "/". implode("/",$loc);
+	
+	if(!file_exists($uploads . $path)){
+		drupal_set_message(t('This file does not exist, or you do not have access.'),'warning');
+		return "";
+	}
+	else
+	{
+		end($loc);
+		$ext = home_directory_get_file_extension($loc[key($loc)]);
+		$isImage = home_directory_check_image($ext); 
+		
+		if($isImage)
+		{
+			$content = home_directory_content_type($ext,"image/jpeg");
+			header("content-type: $content");
+			readfile($uploads.$path);
+		}
+		else
+		{
+			header("content-type: image/png");
+			if(is_file(getcwd().'/'.drupal_get_path("module","home_directory")."/images/filetypes/file_".$ext.".png"))
+				readfile(getcwd().'/'.drupal_get_path("module","home_directory")."/images/filetypes/file_".$ext.".png");
+			else
+				readfile(getcwd().'/'.drupal_get_path("module","home_directory")."/images/filetypes/file_".$ext.".png");
+		}
+	}
+}
+function home_directory_check_image($ext)
+{
+	return (preg_match("/$ext/i","png jpg jpeg tif tiff bmp gif"));
+}
+function home_directory_download()
+{
+	global $uploads, $runs, $user;
+	$loc = arg();
+	unset($loc[0]);
+	
+	switch($loc[1])
+	{
+		case "uploads": $from = $uploads; break;
+		case "runs": $from = $runs; break;
+		case "tmp": $from = "/dae/spool/" . $user->uid . "-"; $tmp = true; break;
+		default: $from = $runs; break;
+	}
+	unset($loc[1]);
+
+	if(!$tmp)
+		$path = "/".implode("/",$loc);
+	else
+		$path = $loc[2];
+
+	if(!file_exists($from . $path)){
+		drupal_set_message(t('This file does not exist, or you do not have access.'),'warning');
+	}
+	else
+	{
+		end($loc);
+		header('Content-Disposition: attachment; filename='. $loc[key($loc)]);
+		$ext = home_directory_get_file_extension($loc[key($loc)]);
+		$content = home_directory_content_type($ext,"");
+		header("content-type: $content");
+		header("Content-Length: ".filesize($from.$path));
+		readfile($from.$path);
+	}
+
+	return false;
+}
+/**
+ * Implementation of delete().
+ *//*
+function home_directory_delete()
+{
+	$loc = arg();
+	unset($loc[0]);
+	unset($loc[1]);
+	global $uploads, $user;
+	if(user_access('delete data'))
+	{
+		$dir = '/'.implode('/',$loc);
+		
+		if(!file_exists($uploads . $dir))
+		{
+			drupal_set_message(t('This file does not exist, or you do not have access.'),'warning');
+			return "";
+		}
+		else
+		{
+			home_directory_remove_file();
+			drupal_goto('uploads/deleted'.$dir);
+		}
+	}
+	else
+	{
+		drupal_set_message(t('You do not have permission to delete data.'),'warning');
+		return "";
+	} 
+}*/
+function home_directory_remove_file($dir)
+{
+	global $uploads;
+	home_directory_change_usage(-(filesize($uploads . $dir)));
+	unlink($uploads . $dir);
+}
+function home_directory_remove_directory($dir,$subdir = "")
+{
+	global $uploads;
+	
+	if(is_dir($uploads .'/'. $dir))
+	{
+	
+		$uploadsDir = $uploads . $dir .'/' . $subdir;
+		
+		$files = hd_scandir($uploadsDir);
+		
+		foreach($files as $file):
+		
+			if(is_dir($uploadsDir . '/' . $file))
+				home_directory_remove_directory($dir,$subdir.$file.'/');
+			else if(is_file($uploadsDir . '/' . $file))
+				 home_directory_remove_file($dir .'/' . $subdir . $file);
+			
+		endforeach;
+		rmdir($uploadsDir);
+	}	
+	
+}/*
+function home_directory_rmdir()
+{
+	$loc = arg();
+	unset($loc[0]);
+	unset($loc[1]);
+	global $uploads;
+	if(user_access('delete data'))
+	{
+		foreach($loc as $folder):
+	
+			$dir.= "/" . $folder;
+	
+		endforeach;
+		
+		if(!is_dir($uploads . $dir))
+		{
+			drupal_set_message(t('This directory does not exist, or you do not have access.'),'warning');
+			return "";
+		}
+		else if(count(scandir($uploads . $dir)) > 2)
+		{
+			drupal_goto('uploads/notempty'.$dir);
+		}
+		else
+		{
+			rmdir($uploads . $dir);
+			drupal_goto('uploads/deleted'.$dir);
+		}
+	}
+	else
+	{
+		drupal_set_message(t('You do not have permission to delete data.'),'warning');
+		return "";
+	} 
+}*/
+function hd_scandir($dir)
+{
+	/**
+	 * Normally the $dir should always exist -execept for testing environments- 
+	 * 
+	 * \todo Log an error in the appropriate log file
+	 */
+	if(file_exists($dir)) {
+		$files = scandir($dir);
+		unset($files[0]);
+		unset($files[1]);
+		return $files;
+	}
+	else return array();
+}
+function home_directory_move()
+{
+	$loc = arg();
+	unset($loc[0]);
+	unset($loc[1]);
+	global $uploads;
+	if(user_access('delete data'))
+	{
+		$to = array_search("to", $loc);
+		
+		if(!empty($to)){
+			for($i=2;$i<$to;$i++){
+		
+				$dir.= "/" . $loc[$i];
+		
+			}
+			
+			for($i=$to+1;$i<count($loc)+2;$i++){
+		
+				$move.= "/" . $loc[$i];
+		
+			}
+			
+			if(!file_exists($uploads . $dir))
+			{
+				drupal_set_message(t('File does not exist.'),'warning');
+				return "";
+			}
+			else if(is_dir($uploads . $dir))
+			{
+				drupal_set_message(t('Must be a file.'),'warning');
+				return "";
+			}
+			else
+			{
+				rename($uploads . $dir, $uploads . $move);
+				drupal_goto('uploads/moved'.$move);
+			}
+		}
+		else
+		{
+			drupal_set_message(t('Invalid move operation.'),'warning');
+			return "";
+		}
+	}
+	else
+	{
+		drupal_set_message(t('You do not have permission to move data.'),'warning');
+		return "";
+	} 
+}
+
+/**
+ * Implementation of hook_perm().
+ */
+function home_directory_perm()
+{
+	return array('access uploads', 'access runs', 'commit data', 'upload data', 'delete data');
+}
+function home_directory_commit()
+{
+	return "";
+}
+/**
+ * Implementation of upload.
+ */
+function home_directory_mkdir() {
+  
+  $loc = arg();
+  unset($loc[0]);
+  unset($loc[1]);
+
+  $dir = implode("/",$loc);
+  $dir .= "/";
+  
+  if(empty($dir))
+  	$dir = '/';
+  
+  $form = array();
+  
+   $form['home_directory_dir'] = array(
+    '#type' => 'textfield',
+    '#title' => t('New Directory Name'),
+    '#description' => t('Name of new subdirectory !dir without a trailing slash.',array('!dir' => 'of '.$dir))
+  );
+  $form['home_directory_path'] = array(
+    '#type' => 'hidden',
+    '#value' => t('!dir',array('!dir' => $dir)),
+  );
+  $form['home_directory_submit'] = array(
+    '#type' => 'submit',
+    '#title' => t('Submit'),
+    '#default_value' => t('Create'),
+    '#description' => t('Submit')
+  );
+  
+  return $form;
+}
+/**
+ * Implementation of mkdir_submit.
+ */
+function home_directory_mkdir_validate($form, &$form_state) {
+
+  if ($form_state['values']['home_directory_dir'] == 'o' || 
+  	  $form_state['values']['home_directory_dir'] == 'commit') 
+  	{
+    form_set_error('', t('Invalid directory name.'));
+  }
+}
+/**
+ * Implementation of mkdir_submit.
+ */
+function home_directory_mkdir_submit($form_id, $form_values)
+{
+	global $uploads;
+	
+	if(!file_exists($uploads .'/'. $form_values['values']['home_directory_path']))
+	{
+		$form_values['values']['home_directory_path'] = "";
+	}
+	
+	$dir = $form_values['values']['home_directory_dir'];
+	$fullPathtoDir = $uploads .'/'. $form_values['values']['home_directory_path'];
+	$relativePathtoDir = 'uploads/view/'.$form_values['values']['home_directory_path'];
+	
+	if(home_directory_make_directory($dir,$fullPathtoDir))
+		drupal_goto($relativePathtoDir);
+	else
+		drupal_set_message(t('Directory %dir could not be created.', array('%dir' => $dir)),'error');
+}
+/**
+ * Implementation of make_directory.
+ */
+function home_directory_make_directory($dir,$fullPathtoDir,$recurse = false)
+{
+	$dirName = preg_replace("/[^a-zA-Z0-9]/","_",$dir);
+	$dirName = home_directory_dir_rename($fullPathtoDir,$dirName);
+		
+	if(mkdir($fullPathtoDir.$dirName))
+		return $dirName;
+	else
+		return false;
+}
+/**
+ * Implementation of upload.
+ */
+function home_directory_upload() {
+  $form = array();
+  $form['#attributes'] = array('enctype' => "multipart/form-data");
+  
+  $loc = arg();
+  unset($loc[0]);
+  
+  foreach($loc as $folder):
+	
+			$dir.= $folder . "/";
+	
+  endforeach;
+  
+  $form['home_directory_file'] = array(
+    '#type' => 'file',
+    '#title' => t('File'),
+    '#description' => t('File to upload')
+  );
+  $form['home_directory_path'] = array(
+    '#type' => 'hidden',
+    '#value' => t('!dir',array('!dir' => $dir)),
+  );
+  $form['home_directory_submit'] = array(
+    '#type' => 'submit',
+    '#title' => t('Submit'),
+    '#default_value' => t('Upload'),
+    '#description' => t('Submit')
+  );
+  return $form;
+}
+
+/**
+ * Implementation of upload submit.
+ */
+function home_directory_upload_submit($form_id, $form_values)
+{
+ global $uploads, $user;
+
+  $validators = array(
+    'file_validate_extensions' => array(variable_get('home_directory_extensions', '')),
+    'file_validate_size' => array(variable_get('home_directory_filesize', ''), variable_get('home_directory_size', '')),
+  );
+  // Save new file uploads.
+ 
+ if(!file_exists($uploads .'/'. $form_values['values']['home_directory_path']))
+	{
+		$form_values['values']['home_directory_path'] = "";
+	}
+
+  $file = file_save_upload('home_directory_file', $validators);
+
+  if($file)
+  {  
+	  $path = $uploads .'/'. $form_values['values']['home_directory_path'];
+	
+	  $filename=preg_replace("/[^a-zA-Z0-9\.\ ]/","_",$file->filename);  
+	  $filename = home_directory_upload_rename($path,$filename);
+	  
+	  rename($file->destination, $path . $filename);
+	  home_directory_change_usage(filesize($path. $filename));
+	  drupal_goto('uploads/uploaded/' . $form_values['values']['home_directory_path'] . $filename);
+  }
+}
+function home_directory_upload_rename($path,$filename)
+{
+	$filenameParts = explode('.',$filename);
+	$num = 1;
+	while(is_file($path.$filename)):
+		$filename = $filenameParts[0] . "_" . $num . "." . $filenameParts[1];
+		$num++;
+	endwhile;
+	
+	return $filename;
+}
+function home_directory_dir_rename($path,$dirName)
+{
+	$num = 1;
+	$try = $dirName;
+	while(file_exists($path.$try)):
+		$try = $dirName . "_" . $num;
+		$num++;
+	endwhile;
+	
+	return $try;
+}
+function home_directory_change_usage($amount)
+{
+	global $user;
+	if($amount < 0)
+	{
+		$r = db_query("select used from {user_storage} where uid = ".$user->uid);
+		$row = db_fetch_array($r);
+		if($amount*-1 > $row['used'])
+			$amount = $row['used']*-1;
+	}
+	update_sql("update {user_storage} set used = used+". $amount ." where uid = ".$user->uid);
+}

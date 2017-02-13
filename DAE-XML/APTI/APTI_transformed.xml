@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<page_image>
+	<id>12</id>
+	<width>22</width>
+	<height>22</height>
+	<type_list>
+		<type_list_item>
+			<id>png</id>
+			<name>png</name>
+			<description>This is a datatype of png images.</description>
+		</type_list_item>
+		<type_list_item>
+			<id>APTI wordImage</id>
+			<name>APTI wordImage</name>
+			<description>This is a datatype of APTI wordImages.</description>
+		</type_list_item>
+	</type_list>
+	<copyright_list/>
+		<contributor_list>
+			<contributor_list_item>
+			<id>APTI</id>
+			<name>APTI</name>
+		</contributor_list_item>
+	</contributor_list>
+	<value_list>
+		<value_list_item>
+			<id/>
+			<value>Arabic Transparent</value>
+			<property>
+				<id>APTI font name</id>
+				<type_list>
+					<type_list_item>
+						<id>APTI wordImage</id>
+						<name>APTI wordImage</name>
+						<description>This is the APTI wordImage datatype.</description>
+					</type_list_item>
+				</type_list>
+			</property>
+		</value_list_item>
+		<value_list_item>
+			<id/>
+			<value>Plain</value>
+			<property>
+				<id>APTI font style</id>
+				<type_list>
+					<type_list_item>
+						<id>APTI wordImage</id>
+					</type_list_item>
+				</type_list>
+			</property>
+		</value_list_item>
+		<value_list_item>
+			<id/>
+			<value>10</value>
+			<property>
+				<id>APTI font size</id>
+				<type_list>
+					<type_list_item>
+						<id>APTI wordImage</id>
+					</type_list_item>
+				</type_list>
+			</property>
+		</value_list_item>
+			<value_list_item>
+			<id/>
+			<value>downsampling5</value>
+			<property>
+				<id>APTI wordImage render type</id>
+				<type_list>
+					<type_list_item>
+						<id>APTI wordImage</id>
+					</type_list_item>
+				</type_list>
+			</property>
+		</value_list_item>
+		<value_list_item>
+			<id/>
+			<value>java</value>
+			<property>
+				<id>APTI renderer</id>
+				<type_list>
+					<type_list_item>
+						<id>APTI wordImage</id>
+					</type_list_item>
+				</type_list>
+			</property>
+		</value_list_item>
+		<value_list_item>
+			<id/>
+			<value>antialiasing</value>
+			<property>
+				<id>APTI render filtering</id>
+				<type_list>
+					<type_list_item>
+						<id>APTI wordImage</id>
+					</type_list_item>
+				</type_list>
+			</property>
+		</value_list_item>
+		<value_list_item>
+			<id/>
+			<value>???</value>
+			<property>
+				<id>APTI wordImage transcription</id>
+				<name>APTI wordImage transcription</name>
+				<description>APTI wordImage transcription</description>
+				<type_list>
+					<type_list_item>
+						<id>APTI wordImage</id>
+					</type_list_item>
+				</type_list>
+			</property>
+		</value_list_item>
+		<value_list_item>
+			<id/>
+			<value>2</value>
+			<property>
+				<id>APTI wordImage number of page elements</id>
+				<type_list>
+					<type_list_item>
+						<id>APTI wordImage</id>
+					</type_list_item>
+				</type_list>
+			</property>
+		</value_list_item>
+	</value_list>
+	<page_element_list>
+		<page_element_list_item>
+			<id>10</id>
+			<name>paw 10</name>
+			<description>paw 10</description>
+			<value_list>
+				<value_list_item>
+					<id/>
+					<value>10</value>
+					<property>
+						<id>APTI paw ordering</id>
+						<name>APTI paw ordering</name>
+						<description>APTI paw ordering</description>
+						<type_list>
+							<type_list_item>
+								<id>APTI Paw</id>
+								<name>APTI Paw</name>
+								<description>APTI Paw</description>
+							</type_list_item>
+						</type_list>
+					</property>
+				</value_list_item>
+				<value_list_item>
+					<id/>
+					<value>1</value>
+					<property>
+						<id>APTI paw characters count</id>
+						<name>APTI paw characters count</name>
+						<description>APTI paw characters count</description>
+						<type_list>
+							<type_list_item>
+								<id>APTI Paw</id>
+							</type_list_item>
+						</type_list>
+					</property>
+				</value_list_item>
+				<value_list_item>
+					<id/>
+					<value>TildAboveAlif_I</value>
+					<property>
+						<id>APTI paw text</id>
+						<name>APTI paw text</name>
+						<description>APTI paw text content</description>
+						<type_list>
+							<type_list_item>
+								<id>APTI Paw</id>
+							</type_list_item>
+						</type_list>
+					</property>
+				</value_list_item>
+			</value_list>
+		</page_element_list_item>
+		<page_element_list_item>
+			<id>20</id>
+			<name>paw 20</name>
+			<description>paw 20</description>
+			<value_list>
+				<value_list_item>
+					<id/>
+					<value>20</value>
+					<property>
+						<id>APTI paw ordering</id>
+						<name>APTI paw ordering</name>
+						<description>APTI paw ordering</description>
+						<type_list>
+							<type_list_item>
+								<id>APTI Paw</id>
+								<name>APTI Paw</name>
+								<description>APTI Paw</description>
+							</type_list_item>
+						</type_list>
+					</property>
+				</value_list_item>
+				<value_list_item>
+					<id/>
+					<value>2</value>
+					<property>
+						<id>APTI paw characters count</id>
+						<name>APTI paw characters count</name>
+						<description>APTI paw characters count</description>
+						<type_list>
+							<type_list_item>
+								<id>APTI Paw</id>
+							</type_list_item>
+						</type_list>
+					</property>
+				</value_list_item>
+				<value_list_item>
+					<id/>
+					<value>Laam_B Taaa_E</value>
+					<property>
+						<id>APTI paw text</id>
+						<name>APTI paw text</name>
+						<description>APTI paw text content</description>
+						<type_list>
+							<type_list_item>
+								<id>APTI Paw</id>
+							</type_list_item>
+						</type_list>
+					</property>
+				</value_list_item>
+			</value_list>
+		</page_element_list_item>
+	</page_element_list>
+</page_image>

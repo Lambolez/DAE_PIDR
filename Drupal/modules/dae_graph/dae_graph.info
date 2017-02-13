@@ -1,0 +1,9 @@
+;$Id:$
+name = dae_graph
+description = "This module provides dynamic represntation of the database."
+core = 6.x
+php = 5.2
+package = DAE Modules
+scripts[]= jit.js
+scripts[]= space_tree.js
+

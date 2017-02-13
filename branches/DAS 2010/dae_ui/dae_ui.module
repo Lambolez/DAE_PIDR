@@ -1,0 +1,259 @@
+<?php
+// $Id:$
+
+/**
+ * @file dae_ui.module
+ *
+ */
+
+drupal_add_css(drupal_get_path("module","dae_ui") . '/jquery.alerts.css');
+drupal_add_js(drupal_get_path("module","dae_ui") . '/jquery.alerts.js');
+
+class DAEUI
+{
+	var $output;
+	var $length;
+	var $prefix;
+	var $color;
+	var $form;
+	
+	function __construct($div_prefix){}
+	function addRecord($info){}
+	function getOutput(){}
+}
+
+class DataUI extends DAEUI
+{
+	
+	function __construct($prefix,$action = false,$color = 0)
+	{
+		$this->prefix = $prefix;
+		$this->color = $color;
+		
+		drupal_add_css(drupal_get_path("module","dae_ui") . '/default.css');
+		drupal_add_js(drupal_get_path("module","dae_ui") . '/dae_ui_effects.js');
+		
+		$this->form = false;
+		
+		if(!empty($action)):
+			$this->output .= "";
+			$this->output .= "<form name=\"flagForm\" method=\"post\" action=\"?q=browse/flag\"><input type=\"hidden\" name=\"ds\"><input type=\"hidden\" name=\"comments\"></form><ul id=\"dae-data_list\">";
+			$this->form = true;
+		endif;
+	}
+	
+	function addCheckboxRecord($info)
+	{
+		$this->output .= "<li class=\"".$info['children']."\">
+							<div class=\"".$this->prefix."-li".$info['click'].($this->color%2==1?" gray":" white")."\" onClick=\"".$info['onRowClick']."\">
+								<span class=\"left\">".$info['left']."<span id=\"loading-".$info['id']."\" class=\"loading\"></span></span>
+								<input type=\"checkbox\" value=\"".$info['checkbox']['value']."\" class=\"".$info['checkbox']['class']."\" onClick=\"checkChildren(this);event.stopPropagation();\"/>
+							</div>
+							<div class=\"".$this->prefix."-info\">
+								".$info['hidden']."
+							</div>
+						  </li>
+						  ";
+		$this->color++;
+	}
+	function addDownloadRecord($info)
+	{
+		$download = l("<img src=\"".drupal_get_path('module','dae_ui')."/images/download.png\" alt=\"\" />",'browse/download/'.$info['id'],array('html' => true,'attributes' => array('onClick' => 'event.stopPropagation();','title' => 'Download')));
+		$copy = l("<img src=\"".drupal_get_path('module','dae_ui')."/images/copy.png\" alt=\"\" />",'browse/copy/'.$info['id'],array('html' => true,'attributes' => array('onClick' => 'event.stopPropagation();','title' => 'Copy to My Uploads')));
+		$flag = "<a href=\"javascript:flagDataSet(".$info['id'].")\" onClick=\"event.stopPropagation();\" title=\"Flag Problem\"><img src=\"".drupal_get_path('module','dae_ui')."/images/flag.png\" alt=\"\" /></a>";
+	
+		$this->output .= "<li class=\"".$info['children']."\">
+							<div class=\"".$this->prefix."-li".$info['click']."\" onClick=\"".$info['onRowClick']."\">
+								<span class=\"left\">
+									<img src=\"".drupal_get_path('module','dae_ui')."/images/".$info['image']."\" alt=\"\" />
+									".$info['left']."
+									<span id=\"loading-".$info['id']."\" class=\"loading\"></span>
+								</span>
+								<span class=\"actions\">
+									$flag
+									$copy
+									$download
+								</span>
+							</div>
+							<div class=\"".$this->prefix."-info\">
+								".$info['hidden']."
+							</div>
+						  </li>
+						  ";
+		$this->color++;
+	}
+	function setColor($color)
+	{
+		$this->color = $color;
+	}
+	function getOutput()
+	{
+		if($this->form)
+			return $this->output . "</ul>";
+		else
+			return $this->output;
+	}
+
+}
+class RunUI extends DAEUI
+{
+	
+	function __construct($prefix)
+	{
+		$this->prefix = $prefix;
+		
+		drupal_add_css(drupal_get_path("module","dae_ui") . '/default.css');
+		drupal_add_js(drupal_get_path("module","dae_ui") . '/dae_ui_effects.js');
+		
+		$this->output .= "<ul id=\"".$this->prefix."_list\">";
+	}
+	function getRunStatus($row)
+	{
+		require_once("./".drupal_get_path('module','algorithms')."/algorithms_status.var");
+	
+		switch($row['STAT'])
+		{
+			case RUN_FAILED:
+				return "<div class=\"dae-run-failed\">
+							Run Failed
+							<img src=\"".drupal_get_path('module','dae_ui')."/images/x.png\" alt=\"\" />
+						</div>";
+				break;
+			case RUN_COMPLETE:
+				return "<span class=\"algorithm_run_complete\">
+							Complete
+						</span>
+						<span class=\"actions\">"
+							.l("<img src=\"".drupal_get_path('module','dae_ui')."/images/copy.png\" alt=\"\" />",
+								'run/copy/'.$row['ALGORITHM_RUN_ID'],
+								array('html' => true,
+								'attributes' => array(
+									'onClick' => 'event.stopPropagation();',
+									'title' => 'Copy Output to My Uploads'
+									)
+								)
+							 )
+							.l("<img src=\"".drupal_get_path('module','dae_ui')."/images/download.png\" alt=\"\" />",
+								'getFile/runs/'.$row['ALGORITHM_RUN_ID'].'/output/output.zip',
+								array('html' => true,
+								'attributes' => array(
+									'onClick' => 'event.stopPropagation();',
+									'title' => 'Download Output'
+									)
+								)
+							 ).
+						"</span>";
+				break;
+			case RUN_RUNNING:
+				return "<span id=\"run_status-".$row['ALGORITHM_RUN_ID']."\" class=\"algorithm_run_running\">
+							In Progress
+							<img id=\"run_status_image-".$row['ALGORITHM_RUN_ID']."\" src=\"".drupal_get_path("module","home_directory")."/images/running.gif\" alt=\"Running\" />
+						</span>";
+				break;
+			default:
+				return "<span id=\"run_status-".$row['ALGORITHM_RUN_ID']."\" class=\"algorithm_run_running\">
+							Status Unknown
+							<img src=\"".drupal_get_path('module','dae_ui')."/images/bug.png\" alt=\"\" />
+						</span>";
+				break;
+		}
+
+	}
+
+	function addRecord($info)
+	{
+	
+		$this->output .= "<li class=\"".$info['children']."\">
+							<div class=\"".$this->prefix."-li\">
+								<div class=\"".$this->prefix."-name click\" onClick=\"".$info['onRowClick']."\">
+									<span class=\"left\">
+										<img src=\"".drupal_get_path('module','dae_ui')."/images/".$info['image']."\" alt=\"\" />
+										".$info['left']."
+										<span id=\"loading-".$info['id']."\" class=\"loading\"></span>
+									</span>
+									".$info['right']."
+								</div>
+								<div class=\"".$this->prefix."-info\">
+									<div class=\"clear\"></div>
+								</div>
+							</div>
+						  </li>
+						  ";
+	}
+	function getOutput()
+	{
+		return $this->output . "</ul>";
+	}
+
+}
+class UploadUI extends DAEUI
+{
+	
+	function __construct($prefix)
+	{
+		$this->prefix = $prefix;
+		
+		drupal_add_css(drupal_get_path("module","dae_ui") . '/default.css');
+		drupal_add_js(drupal_get_path("module","dae_ui") . '/dae_ui_effects.js');
+		
+		$this->output .= "<ul id=\"".$this->prefix."_list\">\n";
+	}
+	
+	function addRecord($info)
+	{
+	
+		$this->output .= "<li class=\"".$info['children']."\">
+							<div class=\"".$this->prefix."-li\">
+								<div class=\"".$this->prefix."-name ".$info['click']."\" onClick=\"".$info['onRowClick']."\">
+									<span class=\"left\">
+										".$info['image']
+										 .$info['left']."
+									</span>
+									<span class=\"actions\">
+										<input name=\"".$info['checkbox']['name']."\" type=\"checkbox\" value=\"".$info['checkbox']['value']."\" class=\"".$info['checkbox']['class']."\" onClick=\"event.stopPropagation();\"/>
+									</span>
+								</div>
+								<div class=\"".$this->prefix."-info\">";
+									
+										foreach($info['hidden'] as $info_div):
+									
+											$this->output.=	"<div class=\"".$info_div['class']."\">
+																<h4>".$info_div['title']."</h4>
+																<div class=\"".$info_div['label']['class']."\">";
+											
+											unset($info_div['label']['class']);
+																
+											foreach($info_div['label'] as $label):
+												
+												$this->output.= "$label<br/>";
+																
+											endforeach;
+											
+											$this->output.=	"</div>
+															<div class=\"".$info_div['info']['class']."\">";
+											
+											unset($info_div['info']['class']);
+											
+											foreach($info_div['info'] as $label):
+												
+												$this->output.= "$label<br/>";
+																
+											endforeach;
+											
+											$this->output.= "</div>
+															</div>";
+											
+										endforeach;
+										
+			$this->output .=		"<div class=\"clear\"></div>
+								</div>
+							</div>
+						  </li>
+						  ";
+	}
+	function getOutput()
+	{
+		return $this->output . "</ul>";
+	}
+
+}

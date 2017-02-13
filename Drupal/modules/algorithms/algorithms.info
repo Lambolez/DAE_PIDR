@@ -1,0 +1,8 @@
+;$Id:$
+name = DAE Algorithms
+description = "This module connects to a database and allows users to run algorithms"
+core = 6.x
+package = DAE Modules
+dependencies[] = home_directory
+dependencies[] = daedatabase
+dependencies[] = dae_ui

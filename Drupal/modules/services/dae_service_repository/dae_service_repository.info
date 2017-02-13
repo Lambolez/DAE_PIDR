@@ -1,0 +1,11 @@
+; $Id:$
+name = Repository Service
+description = SQL query service.
+package = DAE Services
+dependencies[] = services
+dependencies[] = soap_server
+dependencies[]  = daedatabase
+core = 6.x
+version = "6.x-2.2"
+core = "6.x"
+project = "DAE services"

@@ -1,0 +1,194 @@
+/* home_directory styles */
+
+.hd-breadcrumbs
+{
+	font-size:8px;
+	color:#777;
+	margin-top:5px;
+	text-align: right;
+}
+.left
+{
+	float:left;
+}
+.hd-breadcrumbs a
+{
+	font-size:11px;
+}
+.hd-breadcrumbs img
+{
+	margin-right:3px;
+	padding-bottom:6px;
+	vertical-align: middle;
+}
+.hd-upload_row , .hd-runs_row
+{
+	min-height:25px;
+	padding:5px;
+	overflow: hidden;
+	text-align: right;
+}
+
+.hd-runs_block
+{
+	cursor: pointer;
+	height:27px;
+}
+.file_info_general, .file_info_image
+{
+	float:left;
+	margin:5px 20px 0 0;
+	padding-bottom: 10px;
+}
+ .hd-upload_info h4
+{
+	font-size: 12px;
+	font-weight: bold;
+	margin-bottom: 0px;
+}
+.hd-upload_filename
+{
+	text-align: right;
+	height:25px;
+	cursor: pointer;
+}
+.hd-upload_info
+{
+	text-align:left;
+	display: none;
+	border-top:1px solid #ccc;
+}
+.hd-directories
+{
+	list-style-type: none;
+}
+.left
+{
+	float:left;
+}
+.hd-upload_row img, .hd-runs_row img
+{
+	vertical-align: middle;
+	margin-right: 4px;
+}
+.hd-upload_row.gray, .hd-runs_row.gray
+{
+	background:#F0EEED;
+}
+.hd-mv
+{
+	display:inline;
+}
+.hd-algo_desc
+{
+	display:none;
+}
+#hd-algorithms li strong:hover
+{
+	cursor: pointer;
+	text-decoration: underline;
+}
+#hd-usage
+{
+	margin-top:25px;
+	text-align: center;
+	font-size:10px;
+	font-weight: bold;
+}
+#hd-usage-container
+{
+	height:50px;
+	width:300px;
+	margin:0 auto;
+	background:#ECE3D9 url('../images/usage-left.gif') no-repeat;
+}
+.hd-usage-container-right
+{
+	width:294px;
+	background:url('../images/usage-right.gif') no-repeat;
+	background-position:right;
+	padding:3px;
+}
+#hd-used
+{
+	background:url('../images/usage-bar.gif');
+	height:44px;
+	margin-left:0px;
+	min-width:5px !important;
+}
+
+#hd-directories
+{
+	
+}
+
+#hd-directories img
+{
+	vertical-align: middle;
+}
+
+#hd-uploads_batch_operations
+{
+	margin:4px 0 6px 0;
+}
+#hd-uploads_batch_operations a
+{
+	margin-right:10px;
+	font-size:11px;
+}
+#hd-uploads_batch_operations a:hover
+{
+	cursor: pointer;
+}
+#batch_move_uploads
+{
+	padding-left:20px;
+	background:url('../images/move.png') no-repeat 0px 0em;	
+}
+#batch_delete_uploads
+{
+	padding-left:20px;
+	background:url('../images/delete.png') no-repeat 0px 0em;	
+}
+#batch_download_uploads
+{
+	padding-left:20px;
+	background:url('../images/download_upload.png') no-repeat 0px -.2em;	
+}
+#hd-uploads_batch_selectors
+{
+	font-size:11px;
+}
+#hd-move_to_options
+{
+	position: absolute;
+	margin-left:10px;
+	z-index: 1;
+	background:url('../images/dropdown.png');
+	list-style-type: none;
+	min-width: 120px;
+	display: none;
+}
+#hd-move_to_options li
+{
+	cursor: pointer;
+	padding:3px 20px 3px 8px;
+	border-bottom:1px solid #eee;
+}
+#hd-move_to_options li:hover
+{
+	background:#999;
+}
+#hd-upload-file
+{
+	background:url('../images/upload.png') no-repeat 0px -.2em;
+}
+#hd-make-subdirectory
+{
+	background:url('../images/add_16.png') no-repeat 0px -.2em;
+}
+.icon-link
+{
+	padding:2px 0 2px 20px;
+	margin-right:10px;
+}

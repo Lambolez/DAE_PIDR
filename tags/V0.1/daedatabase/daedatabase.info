@@ -1,0 +1,5 @@
+;$Id:$
+name = "DAE Database"
+description = "This module connects to a database and allows users to run algorithms"
+core = 6.x
+package = DAE Modules

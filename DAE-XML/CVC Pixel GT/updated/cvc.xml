@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<textGt oc_v="2" height="768" image_name="IMG_2468.JPG" width="1024">
+<textLine Transcription="CLOCK" Xmax="789" Xmin="186" Ymax="255" Ymin="140" id="0">
+<word Transcription="CLOCK" Xmax="789" Xmin="186" Ymax="255" Ymin="140" id="0">
+<atom MergedByDesign="false" SplitByDesign="false" Transcription="C" id="0">
+<cc id="0" perimeterLength="494">
+<area>
+<xpoints>186 186 186 186 186 186</xpoints>
+<ypoints>203 204 205 206 207 209</ypoints>
+</area>
+<skeleton>
+<xpoints>200 200 200 200 200 200</xpoints>
+<ypoints>202 203 204 205 206 207</ypoints>
+</skeleton>
+</cc>
+</atom>
+</word>
+</textLine>
+</textGt>

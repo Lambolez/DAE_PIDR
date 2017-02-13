@@ -1,0 +1,79 @@
+<?php
+// $Id:$
+
+/**
+ * @file daedatabase.module
+ * @author  Bart Lamiroy <lamiroy@cse.lehigh.edu>
+ * @version 1.0
+ *
+ * \brief Provides the Drupal hooks for module daedatabase.
+ *
+ * This module is aiming at making interaction with various DBMSs easier from
+ * a PHP coding point of view. It provides a set of classes and functions that
+ * allow simple SQL interaction with any DBMS in a transparent way, so that
+ * the PHP programmer can focus on SQL, rather than on the underlying DBMS syntax
+ * for connecting and querying.
+ *
+ * This module is currently implemented for Oracle and MySQL.
+ *
+ * Actual code and data structures are declared in daedatabase_db.inc. 
+ * 
+ * @section LICENSE
+ * 
+ *  This file is part of the DAE Platform Project (DAE).
+ *
+ *  DAE is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  DAE is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with DAE.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+ 
+require_once('daedatabase_db.inc');
+
+/**
+* \brief Default Drupal menu hook function
+*
+* This function declares the Drupal menu names and hierarchy, as well as the associated callback functions.
+* Since this module only provides configuration variables and DBMS interaction APIs there are no browsable 
+* contents pages or call back functions that need to be declared.
+*
+* The callback functions used in this module are:
+*  - daedatabase_admin() for the Administration menu, 
+*
+* @returns Drupal menu declaration array structure
+*/
+function daedatabase_menu() 
+{
+   $items = array(); 
+   
+   $items['admin/settings/daedatabase'] = array (
+		'title' => 'DAE Database Settings',
+		'description' => 'Configure DAE database settings.',
+        'access arguments' => array('administer site configuration'),
+    	'page callback' => 'drupal_get_form',
+    	'page arguments' => array('daedatabase_admin'),
+    	'file' => 'daedatabase.admin.inc',
+  );
+
+  return $items;
+}
+
+/**
+* \brief Default Drupal security hook function
+*
+* This function declares the what new Drupal access rights are used by this module.
+*
+*/
+function daedatabase_perm()
+{
+	return array('modify DAE settings', 'debug DAE Database', 'view public data', 'raw DAE database access', 'raw read-only DAE database access');
+}

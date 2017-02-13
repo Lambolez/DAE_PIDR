@@ -1,0 +1,329 @@
+<?php
+// $Id:$
+
+/**
+ * @file dae_data.module
+ *
+ */
+
+require_once("./".drupal_get_path('module','daedatabase')."/daedatabase_db.inc");
+require_once("./".drupal_get_path('module','dae_ui')."/dae_ui.module");
+
+function dae_data_menu() 
+{
+   $items = array(); 
+   
+   $items['admin/settings/daedata'] = array (
+	'title' => 'DAE Data Module Settings',
+	'description' => 'Configure DAE data settings.',
+    'access arguments' => array('administer site configuration'),
+	'page callback' => 'drupal_get_form',
+	'page arguments' => array('dae_data_admin'),
+	'file' => 'dae_data.admin.inc',
+  );   
+  $items['browse'] = array (
+	'title' => 'Browse Data',
+	'description' => 'Browse the DAE database.',
+    'access arguments' => array('browse data'),
+	'page callback' => 'dae_data_browse',
+  );
+  $items['browse/subset'] = array (
+	'title' => 'Browse Subset',
+	'description' => 'Browse the DAE database.',
+    'access arguments' => array('browse data'),
+	'page callback' => 'dae_data_browse_subset',
+	'type' => 'MENU_CALLBACK',
+  );
+  $items['browse/download'] = array (
+	'title' => 'Download Dataset',
+	'description' => 'Download data from DAE.',
+    'access arguments' => array('download data'),
+	'page callback' => 'dae_data_download',
+	'type' => 'MENU_CALLBACK',
+  );
+  $items['browse/copy'] = array (
+	'title' => 'Copy Dataset',
+	'description' => 'Copy data from DAE.',
+    'access arguments' => array('download data'),
+	'page callback' => 'dae_data_copy',
+	'type' => 'MENU_CALLBACK',
+  );
+	$items['browse/flag'] = array (
+	'title' => 'Browse Data',
+	'description' => 'Flag data from DAE.',
+    'access arguments' => array('browse data'),
+	'page callback' => 'dae_data_flag',
+	'type' => 'MENU_CALLBACK',
+  );
+
+
+  return $items;
+}
+function dae_data_perm()
+{
+	return array('browse data','download data');
+}
+function dae_data_browse()
+{
+	
+	$db = getDAEDatabase();
+	$ui = new DataUI("dae_data","?q=browse/download");
+	
+	$result = $db->q("select distinct NAME,ID from DATASET where ID not in (select ASSOCIATING_DATASET_ID from ASSOCIATE_DATASET) order by NAME");
+	
+	return dae_data_display_datasets($result,$ui,$db);
+}
+
+function dae_data_browse_subset()
+{
+	$db = getDAEDatabase();
+	$ui = new DataUI("dae_data");
+	
+	$subset = arg(2);
+	
+	if(!check_dataset_id($subset))
+		return "";
+	
+	$result = $db->q("select distinct NAME,ID from DATASET,ASSOCIATE_DATASET where ASSOCIATING_DATASET_ID=ID and DATASET_ID=" . $subset . " order by NAME");
+	
+	echo dae_data_display_datasets($result,$ui,$db,$color);
+
+}
+
+function dae_data_display_datasets($result,$ui,$db)
+{
+	$i = 0;
+	
+	while($row = $db->fetch_array($result)):
+	
+		$info['left'] = $row['NAME'];
+		$info['checkbox']['value'] = $row['ID'];
+		$info['checkbox']['class'] = "dae_dataset";
+		$info['hidden'] = $row['ID'];
+		$info['children'] = "data-leaf";
+		$info['id'] = $row['ID'];
+		$info['image'] = "files.png";
+		
+		
+		if($db->checkDataSetHasChildren($row['ID'])):
+			$info['left'] = "<a href=\"javascript:show()\">".$row['NAME']."</a>";
+			$info['children'] = "collap";
+			$info['onRowClick'] = "showSubSets(this,".$row['ID'].")";
+			$info['click'] = " click";
+			$info['image'] = "dataset.png";
+		endif;
+		
+		$i++;
+		
+		$ui->addDownloadRecord($info);
+		
+		unset($info);
+	
+	endwhile;
+
+	if(!$i):
+		$info['left'] = "No Subsets";
+		$ui->addRecord($info);
+	endif;
+
+	return $ui->getOutput();
+}
+function dae_data_download()
+{
+	$dataset = arg(2);
+	
+	if(!check_dataset_id($dataset))
+		return "";
+	
+	$paths = dae_data_get_array_of_paths($dataset);
+	
+	$zip = dae_data_zip($paths);
+	
+	drupal_goto($zip);
+}
+function dae_data_flag()
+{
+	$dataset = $_POST['ds'];
+	
+	if(!check_dataset_id($dataset))
+		return "";
+	
+	$comments = $_POST['comments'];
+	
+	watchdog("Dataset Flag",t("A user flagged dataset %dataset as having a problem with comments:<br/>\"%comments\"",array("%dataset" => $dataset,"%comments" => $comments)), array(), WATCHDOG_WARNING);
+	
+	drupal_set_message("Thank you.  We will review your concern shortly.","status");
+	
+	return dae_data_browse();
+
+}
+function dae_data_copy()
+{
+	$dataset = arg(2);
+	
+	if(!check_dataset_id($dataset))
+		return "";
+		
+	$paths = dae_data_get_array_of_paths($dataset);
+	
+	$db = getDAEDatabase();
+	
+	$directory = $db->r("select NAME from DATASET where ID = ". $dataset);
+
+	//databaseDebugMessage($directory . ' ' . print_r($paths));
+	
+	dae_data_copy_to_home_directory($paths,$directory);
+	
+	//drupal_goto("uploads");
+}
+function check_dataset_id($dataset)
+{
+	if(!is_numeric($dataset)):
+		watchdog("Security",t("A user attempted to use \"!data\" as a dataset ID",array("!data" => $dataset)),array(), WATCHDOG_WARNING);
+		drupal_set_message("Invalid dataset ID","warning");
+		return false;
+	else:
+		return true;
+	endif;
+}
+function dae_data_copy_to_home_directory($paths,$directory)
+{
+	global $uploads;
+	
+	require_once("./".drupal_get_path('module','home_directory')."/home_directory.module");
+	
+	$directory = home_directory_make_directory($directory,$uploads.'/',true);
+	
+	$prefix = find_prefix($paths);
+	$prefixlength = strlen($prefix);
+	
+	//databaseDebugMessage($prefix,true);
+	
+	while ($prefixlength && $prefix[$prefixlength-1] != '/') {
+        	$prefix = substr($prefix, 0, -1);
+        	$prefixlength--;
+    	}
+	
+	$directory = '/'. $directory .'/';
+	//databaseDebugMessage("dir = " . $directory,true);
+		
+	foreach($paths as $key => $path):
+		$dbpath = $path;
+		
+		//databaseDebugMessage("dbpath = " . $dbpath,true);
+		
+		$paths[$key] = substr($path,$prefixlength);
+		$dirs = explode("/",$paths[$key]);
+		end($dirs);
+		unset($dirs[key($dirs)]);
+		$dirs = implode("/",$dirs);
+		if(!is_dir($uploads.$directory.$dirs))
+			shell_exec("mkdir -p $uploads$directory$dirs");
+		shell_exec("cp $dbpath $uploads$directory$paths[$key]");
+		home_directory_change_usage(filesize($uploads.$directory.$paths[$key]));
+	endforeach;
+	
+	drupal_goto("uploads/view$directory");
+	
+}
+function dae_data_get_array_of_paths($dataset)
+{
+	$db = getDAEDatabase();
+
+	$paths = array();
+	
+	if($db->checkDataSetHasChildren($dataset)):
+		dae_data_get_dataset_leaves($dataset,$leaves);
+	else:
+		$leaves = array($dataset);
+	endif;
+	
+	foreach($leaves as $leaf):
+	
+		//databaseDebugMessage('leaf = ' .$leaf,true);
+			
+		$result = $db->q("select PATH from INCLUDES_PAGE_IMAGE,PAGE_IMAGE where DATASET_ID=". $leaf ." and PAGE_IMAGE_ID=ID");
+		//databaseDebugMessage("select PATH from INCLUDES_PAGE_IMAGE,PAGE_IMAGE where DATASET_ID=". $leaf ." and PAGE_IMAGE_ID=ID");
+
+		$paths = dae_data_get_paths_from_result($result,$paths);
+	
+	endforeach;
+	
+	return $paths;
+}
+function dae_data_get_paths_from_result($result,$paths)
+{
+	$db = getDAEDatabase();
+	
+	while($row = $db->fetch_array($result)):
+			$paths[] = $row['PATH']; 
+			//databaseDebugMessage($row['PATH']);
+	endwhile;
+	
+	return $paths;
+}
+function dae_data_get_dataset_leaves($dataset,&$sets)
+{
+	$db = getDAEDatabase();
+	$result = $db->q("select distinct ID from DATASET,ASSOCIATE_DATASET where ASSOCIATING_DATASET_ID=ID and DATASET_ID=" . $dataset);
+	
+	$sets = array();
+	
+	while($row = $db->fetch_array($result)):
+		if(!$db->checkDataSetHasChildren($row['ID'],$sets))
+			$sets[] = $row['ID'];
+		else
+			dae_data_get_dataset_leaves($row['ID'],$sets);
+	endwhile;
+}
+/**
+*
+*/
+
+function find_prefix($array)
+{
+	$prefix = array_shift($array);  // Select the first item as initial prefix
+	$length = strlen($prefix);
+
+	foreach ($array as $currentitem) {
+		
+    	/**
+    	*  Check if the current prefix is still prefix of the current element in the array
+    	*  If not, find the longest common prefix by removing characters from the end.
+    	**/
+    	while ($length && substr($currentitem, 0, $length) !== $prefix) {
+        	$prefix = substr($prefix, 0, -1);
+        	$length--;
+    	}
+    	if (!$length) break;
+    }	
+    
+    return $prefix; 
+}
+
+function dae_data_zip($paths)
+{
+	global $user;
+	
+	$prefix = find_prefix($paths);
+	$prefixlength = strlen($prefix);
+	
+	while ($prefixlength && $prefix[$prefixlength-1] != '/') {
+        	$prefix = substr($prefix, 0, -1);
+        	$prefixlength--;
+    	}
+	
+	foreach($paths as $key => $path):
+		$paths[$key] = substr($path,$prefixlength);	
+	endforeach;
+	
+	$files = implode(" ",$paths);
+	
+	$time = date("YmdHis");
+	
+	$filename = "/dae/spool/".$user->uid."-".$time.".zip";
+	
+	shell_exec("cd $prefix && zip $filename $files");
+	
+	return "getFile/tmp/$time.zip";
+}

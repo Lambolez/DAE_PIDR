@@ -1,0 +1,97 @@
+<?php
+// $Id: $
+
+/**
+ * @file
+ *  Link commenting functionality to services module.
+ */
+
+
+/**
+ * This is the service authorization handler.
+ * 
+ * Currently this is only a stub.
+ * 
+ * \todo Set up complete authentification handling for Web Services
+ * 
+ */
+function dae_query_pageimage_auth() {
+    return true;
+}
+
+/**
+ * Implementation of hook_perm().
+ */
+function dae_query_pageimage_perm() {
+    return array('download data');
+}
+/**
+ * Implementation of hook_service().
+ */
+function dae_query_pageimage_service() {
+  return array(
+
+    array(
+      '#method'   => 'DAE Data.PageImage Query',
+      '#callback' => 'dae_query_pageimage',
+      '#access callback'  => 'dae_query_pageimage_auth',
+ //     '#access arguments'  => array('get descriptions of data items'),
+      '#file'     => array('file' => 'inc', 'module' => 'dae_query_pageimage'),
+      '#args'     => array(
+        array(
+          '#name'         => 'limit',
+          '#type'         => 'integer',
+          '#description'  => t('the limit of the total number of page images returned'),
+        ),
+        array(
+          '#name'         => 'hasPageImageType',
+          '#type'         => 'IntegerArray',
+          '#description'  => t('the type of the page image'),
+        ),
+        array(
+          '#name'         => 'inDataset',
+          '#type'         => 'IntegerArray',
+          '#description'  => t('the dataset that contains the page image'),
+        ),
+        array(
+          '#name'         => 'hasPageElementType',
+          '#type'         => 'IntegerArray',
+          '#description'  => t('the type of some page element that the page image contains'),
+        ),
+        array(
+          '#name'         => 'hasPageElementDataTypeProperty',
+          '#type'         => 'IntegerArray',
+          '#description'  => t('the datatype property of some page element that the page image contains'),
+        ),
+        array(
+          '#name'         => 'hasPageElementPropertyValue',
+          '#type'         => 'StringArray',
+          '#description'  => t('the datatype property value of some page element that the page image contains'),
+        ),
+        array(
+          '#name'         => 'logicType_hasPageImageType',
+          '#type'         => 'integer',
+          '#description'  => t('the type of the page image'),
+        ),
+        array(
+          '#name'         => 'logicType_inDataset',
+          '#type'         => 'integer',
+          '#description'  => t('the dataset that contains the page image'),
+        ),
+        array(
+          '#name'         => 'logicType_hasPageElementType',
+          '#type'         => 'integer',
+          '#description'  => t('the type of some page element that the page image contains'),
+        ),
+        array(
+          '#name'         => 'logicType_hasPageElementDataTypeProperty',
+          '#type'         => 'integer',
+          '#description'  => t('the datatype property of some page element that the page image contains'),
+        ),
+      ),
+      '#return' => 'IntegerArray',
+      '#help' => t('Retrieve an ID list of page images'),
+    ),
+
+  );
+}

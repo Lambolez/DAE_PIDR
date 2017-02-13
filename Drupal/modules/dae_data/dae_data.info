@@ -1,0 +1,7 @@
+;$Id:$
+name = "DAE Data"
+description = "This module allows users to browse the DAE data"
+core = 6.x
+package = DAE Modules
+dependencies[] = daedatabase
+dependencies[] = dae_ui

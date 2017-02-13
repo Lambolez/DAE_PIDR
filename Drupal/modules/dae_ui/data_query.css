@@ -1,0 +1,35 @@
+
+a.query_parameter{
+	cursor:pointer;
+	color:blue;
+}
+
+a.query_add{
+	cursor:pointer;
+	color:green;
+	font-weight: bold;
+}
+a.query_remove{
+	cursor:pointer;
+	color:red;
+	font-weight: bold;
+}
+a.query_text{
+	cursor:pointer;
+}
+a.logic{
+	cursor:pointer;
+	color:blue;
+	font-size:120%;
+}
+ol.query_condition{
+	list-style-type: upper-alpha;
+}
+
+ul.normal{
+	list-style-type: disc;
+}
+
+div.query_hint{
+	color:grey;
+}

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wordImage id="12">
+  <content transcription="???" nbPaws="2">
+    <paw id="10" nbChars="1">TildAboveAlif_I</paw>
+    <paw id="20" nbChars="2">Laam_B Taaa_E</paw>
+  </content>
+  <font name="Arabic Transparent" fontStyle="Plain" size="10" />
+  <specs encoding="png" width="22" height="15" effect="none" />
+  <generation type="downsampling5" renderer="java" filtering="antialiasing" />
+</wordImage>

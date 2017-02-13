@@ -1,0 +1,1280 @@
+<?php
+// $Id:$
+
+/**
+ * @file
+ * 
+ * @author  Mike Kot <mdk312@lehigh.edu>
+ * 
+ * @version 1.0
+ *
+ * 
+ * @section LICENSE
+ * 
+ *  This file is part of the DAE Platform Project (DAE).
+ *
+ *  DAE is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  DAE is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with DAE.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+ 
+require_once("./".drupal_get_path('module','daedatabase')."/daedatabase_db.inc");
+require_once("./".drupal_get_path('module','dae_ui')."/dae_ui.module");
+require_once ("./".drupal_get_path('module', 'soap_server') ."/nusoap/lib/nusoap.php");
+require_once('./sites/default/misc/identify.php');
+
+global $db;
+$db = getDAEDatabase();
+
+/**
+ * \brief 
+ * 
+ * A callback is added for retrieving copyright information whose URL is end with browse/dataitem/beforedownload
+ * One more callback is added for searching tags and datasets by using dropdown list. Its URL ends with browse/search/select.
+ * 
+ */
+function dae_data_menu() 
+{
+   $items = array(); 
+   
+   $items['admin/settings/daedata'] = array (
+	'title' => 'DAE Data Module Settings',
+	'description' => 'Configure DAE data settings.',
+    'access arguments' => array('administer site configuration'),
+	'page callback' => 'drupal_get_form',
+	'page arguments' => array('dae_data_admin'),
+	'file' => 'dae_data.admin.inc',
+  );   
+  $items['browse'] = array (
+	'title' => 'Browse Data',
+	'description' => 'Browse the DAE database.',
+    'access arguments' => array('browse data'),
+	'page callback' => 'dae_data_browse',
+	'file' => 'dae_data_browse.inc'
+  );
+  $items['browse/search'] = array (
+	'title' => 'Search Tags',
+	'description' => 'Returns Search JSON',
+    'access arguments' => array('browse data'),
+	'page callback' => 'dae_data_search_tag',
+	'type' => 'MENU_CALLBACK',
+  );
+  $items['browse/search/pageelement/types'] = array (
+	'title' => 'Search Page Element Types',
+	'description' => 'Returns Search JSON',
+    'access arguments' => array('browse data'),
+	'page callback' => 'dae_data_page_element_type_search',
+	'type' => 'MENU_CALLBACK',
+	'file' => 'dae_data_page_elements.inc'
+  );
+  $items['browse/search/results'] = array (
+	'title' => 'Search Results',
+	'description' => 'Search Results',
+    'access arguments' => array('browse data'),
+	'page callback' => 'dae_data_search_results_page',
+	'type' => 'MENU_CALLBACK',
+	'file' => 'dae_data_browse.inc'
+  );
+  $items['browse/tags/search'] = array (
+	'title' => 'Search Tags',
+	'description' => 'Returns Tag JSON',
+    'access arguments' => array('tag data'),
+	'page callback' => 'dae_data_search_tags',
+	'type' => 'MENU_CALLBACK',
+  );
+  $items['browse/tree'] = array (
+        'title' => 'Browse Data Trees',
+        'description' => 'Returns Tree JSON',
+    'access arguments' => array('browse data'),
+        'page callback' => 'dae_data_browse_tree',
+        'page arguments' => array(2,3),
+        'type' => 'MENU_CALLBACK',
+  );
+  $items['browse/dataitem'] = array (
+	'title' => 'Dataset Details',
+	'description' => 'Browse the DAE database.',
+    'access arguments' => array('browse data'),
+	'page callback' => 'dae_data_browse_dataitem',
+	'type' => 'MENU_CALLBACK',
+	'file' => 'dae_data_detail_page.inc',
+  );
+   $items['browse/dataitem/list'] = array (
+	'title' => 'Dataset Details',
+	'description' => 'Browse the DAE database.',
+    'access arguments' => array('browse data'),
+	'page callback' => 'dae_data_get_page_image_list',
+	'type' => 'MENU_CALLBACK',
+	'file' => 'dae_data_detail_page.inc',
+  );
+  $items['browse/dataitem/rate'] = array (
+	'title' => 'Rate Dataset',
+	'description' => 'Browse the DAE database.',
+    'access arguments' => array('data comment'),
+	'page callback' => 'dae_data_browse_dataitem_rate',
+	'type' => 'MENU_CALLBACK',
+	'file' => 'dae_data_detail_page.inc',
+  );
+  $items['browse/dataitem/comment'] = array (
+	'title' => 'View Comment',
+	'description' => 'Browse the DAE database.',
+    'access arguments' => array('data comment'),
+	'page callback' => 'dae_data_browse_dataset_comment_rate',
+	'type' => 'MENU_CALLBACK',
+	'file' => 'dae_data_detail_page.inc',
+  );
+  $items['browse/dataitem/dataitem'] = array (
+	'title' => 'Browse Data',
+	'description' => 'Browse the DAE database.',
+    'access arguments' => array('browse data'),
+	'page callback' => 'dae_data_browse_dataset_dataitem',
+	'type' => 'MENU_CALLBACK',
+	'file' => 'dae_data_detail_page.inc',
+  );
+  $items['browse/dataitem/runoptions'] = array (
+	'title' => 'Run Options',
+	'description' => 'Run an algorithm.',
+    'access arguments' => array('run algorithms'),
+	'page callback' => 'dae_data_browse_runoptions',
+	'type' => 'MENU_CALLBACK',
+	'file' => 'dae_data_detail_page.inc',
+  );
+  $items['browse/dataitem/thumb'] = array (
+	'title' => 'Browse Data',
+	'description' => 'Browse the DAE database.',
+    'access arguments' => array('browse data'),
+	'page callback' => 'dae_data_browse_dataset_thumb',
+        'type' => 'MENU_CALLBACK',
+        'file' => 'dae_data_detail_page.inc',
+  );
+  $items['browse/dataitem/thumb/uri'] = array (   //added by kje212
+    'title' => 'Browse Data',
+	  'description' => 'Browse the DAE database.',
+    'access arguments' => array('browse data'),
+	  'page callback' => 'dae_data_browse_dataset_thumb_uri',
+    'type' => 'MENU_CALLBACK',
+    'file' => 'dae_data_detail_page.inc'
+  );
+  $items['browse/dataitem/pixel-mask'] = array (
+        'title' => 'Pixel Mask',
+        'description' => 'A png alpha mask',
+        'access arguments' => array('browse data'),
+        'page callback' => 'dae_pageimage_pixel_mask',
+        'type' => 'MENU_CALLBACK',
+        'file' => 'dae_data_detail_page.inc',
+        'page arguments' => array(3,4)
+  );
+   $items['browse/dataitem/load/pixel-mask'] = array (
+        'title' => 'Load Pixel Mask JSON',
+        'description' => 'A png alpha mask',
+        'access arguments' => array('browse data'),
+        'page callback' => 'dae_data_pageimage_load_mask',
+        'type' => 'MENU_CALLBACK',
+        'file' => 'dae_data_page_elements.inc',
+        'page arguments' => array(4)
+  );
+  $items['browse/subset'] = array (
+        'title' => 'Browse Subset',
+        'description' => 'Browse the DAE database.',
+    'access arguments' => array('browse data'),
+	'page callback' => 'dae_data_browse_subset',
+	'type' => 'MENU_CALLBACK',
+	'file' => 'dae_data_browse.inc'
+  );
+  $items['browse/dataitem/download'] = array (
+	'title' => 'Download Data',
+	'description' => 'Download data from DAE.',
+    'access callback' => 'dae_data_download_access',
+    'access arguments' => array('download data'),
+	'page callback' => 'dae_data_download',
+	'type' => 'MENU_CALLBACK',
+	'file' => 'dae_data_operations.inc',
+  );
+  $items['browse/dataitem/copy'] = array (
+	'title' => 'Copy Data',
+	'description' => 'Copy data from DAE.',
+    'access arguments' => array('download data'),
+	'page callback' => 'dae_data_copy',
+	'type' => 'MENU_CALLBACK',
+	'file' => 'dae_data_operations.inc',
+  );
+	$items['browse/flag'] = array (
+	'title' => 'Browse Data',
+	'description' => 'Flag data from DAE.',
+    'access arguments' => array('browse data'),
+	'page callback' => 'dae_data_flag',
+	'type' => 'MENU_CALLBACK',
+	'file' => 'dae_data_operations.inc',
+  );
+  	$items['person'] = array ( // added by xiz307
+	'title' => 'View Person',
+	'description' => 'view person information.',
+    'access arguments' => array('view person'),
+	'page callback' => 'dae_view_submitter',
+	'type' => 'MENU_CALLBACK',
+	'file' => 'dae_data_person.inc',
+  );
+  
+  $items['browse/dataitem/beforedownload'] = array (    //added by yang
+        'title' => 'Before Download Data',
+        'description' => 'Before Download data from DAE.',
+    'access arguments' => array('download data'),
+        'page callback' => 'dae_data_download_before',
+        'type' => 'MENU_CALLBACK',
+        'file' => 'dae_data_operations.inc',
+  );
+  
+  $items['browse/search/select'] = array (  //added by yil308
+        'title' => 'Select',
+        'description' => 'Select Datasets and Tags',
+    'access arguments' => array('browse data'),
+	'page callback' => 'dae_data_search_select',
+        'type' => 'MENU_CALLBACK',
+  );
+  
+   $items['browse/dataitem/copyright'] = array (        //added by yang
+        'title' => 'Before Download Data',
+        'description' => 'Show copyright.',
+    'access arguments' => array('download data'),
+        'page callback' => 'dae_data_copyright',
+        'type' => 'MENU_CALLBACK',
+        'file' => 'dae_data_operations.inc',
+  );
+  $items['descript/dataitem'] = array (
+	'title' => 'Get description of data item',
+	'description' => 'Get description of data item',
+    'access arguments' => array('download data'),
+	'page callback' => 'dae_data_description',
+	'type' => 'MENU_CALLBACK',
+	'file' => 'dae_data_descript.inc',
+  );
+  
+  $items['browse/upload'] = array(
+	'title' => 'Commit Data',
+    'page callback' => 'dae_data_upload_page',
+	'access arguments' => array('commit data'),
+    'file' => 'dae_data_upload_file.inc', 
+	);
+  
+  $items['browse/upload_metadata'] = array(
+	'title' => 'Commit Meta Data',
+    'page callback' => 'dae_metadata_upload_page',
+	'access arguments' => array('commit data'),
+    'file' => 'dae_metadata_upload_file.inc', 
+	);
+  
+	$items['browse/query'] = array (
+	'title' => 'Build Customized Queries',
+	'description' => 'Build Customized Queries to Get Data',
+    'page callback' => 'query_page',
+    'file' => 'dae_data_query.inc',
+	'access arguments' => array('download data'),
+	);
+  $items['browse/query_data_form'] = array (
+	'title' => 'AJAX in Building Customized Queries',
+	'description' => 'AJAX in Building Customized Queries',
+    'page callback' => 'query_form',
+    'file' => 'dae_data_query.inc',
+	'access arguments' => array('download data'),
+	'type' => 'MENU_CALLBACK',
+	);
+	$items['browse/query_data_form'] = array (
+	'title' => 'AJAX in Building Customized Queries',
+	'description' => 'AJAX in Building Customized Queries',
+    'page callback' => 'query_form',
+    'file' => 'dae_data_query.inc',
+	'access arguments' => array('download data'),
+	'type' => 'MENU_CALLBACK',
+	);
+  $items['query/page_image'] = array (
+	'title' => 'Get IDs of Queried Page Images',
+	'description' => 'Get IDs of Queried Page Images',
+    'access arguments' => array('download data'),
+	'page callback' => 'query_client',
+	'type' => 'MENU_CALLBACK',
+	'file' => 'dae_data_query_client.inc',
+  );
+  $items['query_preview/page_image'] = array (
+	'title' => 'Get IDs of Queried Page Images',
+	'description' => 'Get IDs of Queried Page Images',
+    'access arguments' => array('download data'),
+	'page callback' => 'query_preview',
+	'type' => 'MENU_CALLBACK',
+	'file' => 'dae_data_query_client.inc',
+  );
+  $items['browse/dataitem/preview'] = array(        //added by kje212
+    'title' => 'Returns thumbnails of a parent dataset',
+    'description' => 'Returns thumbnails of a parent dataset',
+    'access arguments' => array('browse data'),
+    'page callback' => 'dae_dataset_preview',
+    'type' => 'MENU_CALLBACK'
+  );
+  
+  return $items;
+}
+/**
+ * This function adds the necessary javascript and css for dae data pages
+ *
+ */
+function dae_data_init()
+{
+    drupal_add_js(drupal_get_path("module","dae_ui")."/javascript/dae_data_pages.js");
+    drupal_add_js(drupal_get_path("module","dae_ui")."/javascript/dae_data_browse.js");
+    drupal_add_js(drupal_get_path("module","dae_ui")."/javascript/dae_page_image_element.js");
+	drupal_add_js(drupal_get_path("module","dae_ui") . '/dae_ui_effects.js');
+	drupal_add_js(drupal_get_path("module","dae_ui"). "/javascript/jquery-ui.js");
+	drupal_add_css(drupal_get_path("module","dae_ui") . '/default.css');
+    drupal_add_css(drupal_get_path("module","dae_ui") . '/stylesheets/jquery-ui.css');
+    drupal_add_css(drupal_get_path("module","dae_ui") . '/stylesheets/jquery.Jcrop.css');
+}
+/**
+ * This function augments permissions for the dae data module
+ *
+ * @return - an array of permissions added by the dae data module
+ */
+function dae_data_perm()
+{
+        return array('browse data','download data','data comment','tag data','view person','create element','get WSDL data','commit data','add element','add property value','declare datatypes');
+}
+/**
+ * This function returns a json encoding of related data items depending on the type
+ *  
+ * @param arg(2) - the id of the data item to return a tree for
+ *
+ * @return - json encoded data on the parent elements of the requested data item
+ */
+function dae_data_browse_tree()
+{
+  $db = getDAEDatabase();
+	$dataitem = arg(2);
+	settype($dataitem, 'integer');
+	
+	if(!check_dataset_id($dataitem))
+		return drupal_json(array('Invalid Dataitem'));
+	
+        $i = 0;
+        $list = array();
+        
+        $contains= $db->q("select distinct ID,NAME 
+                                           from DATASET,ASSOCIATE_DATASET 
+                                           where ASSOCIATING_DATASET_ID=ID 
+                                           and DATASET_ID = $dataitem",array());
+                
+                while($row = $db->fetch_array($contains)):
+                
+			$list['cs'][$i]['id'] = $row['ID'];
+			$list['cs'][$i]['name'] = $row['NAME'];
+			$i++;
+		endwhile;
+    
+		/*$included = $db->q("SELECT ID,NAME
+							FROM DATASET join ASSOCIATE_DATASET on ASSOCIATING_DATASET_ID = ID and ASSOCIATING_DATASET_ID = $dataitem
+							UNION
+							SELECT DATASET_ID as ID,NAME
+							FROM INCLUDES_PAGE_IMAGE join DATASET on DATASET_ID = ID
+							WHERE PAGE_IMAGE_ID = $dataitem
+							UNION
+							SELECT DATASET_ID as ID,NAME
+							FROM INCLUDES_FILE join DATASET on DATASET_ID = ID
+							WHERE FILE_ID = $dataitem
+							",array());
+    */
+		$included = getParent($dataitem);
+		while($row = $db->fetch_array($included)):
+		
+			$list['cb'][$i]['id'] = $row['ID'];
+			$list['cb'][$i]['name'] = $row['NAME'];
+			$i++;
+                
+      $included = getParent($row['ID']);
+                
+    endwhile;
+       
+        ///selects page element information including parent and location to display parent page image in tree dropdown
+        $included = $db->q("
+                          SELECT PAGE_IMAGE.ID as PARENT_PAGE_IMAGE_ID,
+                            PATH as PARENT_PAGE_IMAGE_PATH, TOPLEFTX AS X,
+                            TOPLEFTY AS Y, PAGE_ELEMENT.WIDTH, PAGE_ELEMENT.HEIGHT
+                          FROM PAGE_IMAGE JOIN CONTAINS_PAGE_ELEMENT ON
+                            PAGE_IMAGE.ID = PAGE_IMAGE_ID JOIN PAGE_ELEMENT
+                            ON PAGE_ELEMENT.ID = PAGE_ELEMENT_ID 
+                          WHERE PAGE_ELEMENT.ID = $dataitem
+                    ",array());
+                
+		while($row = $db->fetch_array($included)):
+		
+		if(dae_data_is_image($dataitem)):
+		
+			$thumb = dae_data_get_thumb_path($row['PARENT_PAGE_IMAGE_ID'],'medium');
+			$thumbsize = linpha_getimagesize($thumb['image']);
+			$truesize = linpha_getimagesize($row['PARENT_PAGE_IMAGE_PATH']);
+			
+            $rx = $thumbsize[0]/$truesize[0];
+            $ry = $thumbsize[1]/$truesize[1];
+                        
+            $mask['top'] = round($row['Y']*$ry);
+            $mask['height'] = round($row['HEIGHT']*$ry);
+            $mask['left'] = round($row['X']*$rx);
+            $mask['width'] = round($row['WIDTH']*$rx);
+                
+            $list['cb'][$i]= array(
+                'id' => $row['PARENT_PAGE_IMAGE_ID'],
+				'name' => basename($row['PARENT_PAGE_IMAGE_PATH']),
+				'thumb' => array('path' => url("browse/dataitem/thumb/".$row['PARENT_PAGE_IMAGE_ID']."/medium"),
+								 'width' => $thumbsize[0],
+								 'height' => $thumbsize[1]),
+				'mask' => $mask
+			);
+			$i++;
+			
+		else:
+		
+			$list['cb'][$i]['id'] = $row['PARENT_PAGE_IMAGE_ID'];
+			$list['cb'][$i]['name'] = basename($row['PARENT_PAGE_IMAGE_PATH']);
+			$i++;
+		
+		endif;
+                
+                endwhile;
+                        
+        drupal_json($list);
+}
+
+function getParent($dataitem){
+  $db = getDAEdatabase();
+  $included = $db->q("
+    select DISTINCT ID, NAME
+      from DATASET,ASSOCIATE_DATASET
+      where ASSOCIATING_DATASET_ID=$dataitem and DATASET_ID=ID                
+    union
+    select DATASET_ID as ID, NAME
+      from INCLUDES_PAGE_IMAGE join DATASET on DATASET_ID = ID
+      where PAGE_IMAGE_ID = $dataitem
+    union
+    select DATASET_ID as ID, NAME
+      from INCLUDES_FILE join DATASET on DATASET_ID = ID
+      where FILE_ID = $dataitem
+  ", array());
+  return $included;
+}
+/**
+ * This function returns a json encoding of tags for the autocomplete search
+ *  
+ * @param $_GET['term'] - the query string against tags
+ *
+ * @return - json encoded list of matching tags
+ */
+function dae_data_search_tags()
+{
+         $query = check_plain($_GET['term']);
+	 
+	 $db = getDAEDatabase();
+	 
+	 $tags = $db->searchTable('result',$query,"VALUE",array("ID", "VALUE"),"TAG",0,0);
+	 $i = 0;
+	 $taglist = array();
+	 while($row = $db->fetch_array($tags)):
+		
+		$taglist[$i]['id'] = $row['ID'];
+		$taglist[$i]['label'] = $row['VALUE'];
+		$taglist[$i]['value'] = $row['VALUE']; 
+		$i++;
+		
+	 endwhile;
+	
+         drupal_json($taglist);
+
+}
+/**
+ * This confirms requests for data items are integers and logs the request if it is not
+ *  
+ * @param $dataitem - the id to check
+ *
+ * @return - true if it is only an integer or false if it is not
+ */
+function check_dataset_id($dataitem)
+{
+        if(!is_numeric($dataitem)):
+                watchdog("Security",t("A user attempted to use \"!data\" as a dataset ID",array("!data" => $dataitem)),array(), WATCHDOG_WARNING);
+                drupal_set_message("Invalid dataset ID","warning");
+                return false;
+        else:
+                return true;
+        endif;
+}
+/**
+ * This function outputs the information on a data item as html to be displayed on the dataset browse page
+ *  
+ * @param arg(3) - the id of the dataitem to retreive page html for
+ *
+ * @return - echoes the html to be retreived via ajax.
+ */
+function dae_data_browse_dataset_dataitem()
+{
+        $dataitem = arg(3);
+	echo dae_data_browse_dataset_dataitem_build($dataitem);
+}
+
+/**
+ * \brief Displays detailed information of a \a DATA_ITEM when accessed
+ * 
+ * @param [in] $dataitem Database DATE_ITEM ID
+ * @param [in] $loadImage
+ *
+ */
+function dae_data_browse_dataset_dataitem_build($dataitem,$loadImage = false)
+{
+        $db = getDAEDatabase(); 
+        
+        switch($db->getDataItemType($dataitem))
+        {
+                case DATA_ITEM_PAGE_IMAGE:
+                        return dae_data_browse_dataset_page_image($dataitem);
+                        break;
+                case DATA_ITEM_PAGE_ELEMENT:
+                        return dae_data_browse_dataset_page_element($dataitem);
+                        break;
+                case DATA_ITEM_FILE:
+                        return dae_data_browse_dataset_file($dataitem);
+                        break;
+                default:
+                        drupal_set_message("Data item does not exist",'warning'); //give up
+                        return "";
+                        break;
+        }       
+
+}
+/**
+ * This function builds and returns an html description of a page image.  IT ASSUMES THE GIVEN DATA ITEM IS A PAGE IMAGE
+ *  
+ * @param $dataitem - the id of the page image.  This function assumes the item is a page image.
+ *
+ * @return - html for a page image description
+ */
+function dae_data_browse_dataset_page_image($dataitem)
+{
+        $db = getDAEDatabase();
+        settype($dataitem, 'integer');
+        
+        // add by yang
+        $all = $db->q("select NAME, FILE_ID from HAS_COPYRIGHT B, FILES C where B.FILE_ID=C.ID and  B.DATA_ITEM_ID =".$dataitem,array());
+        $textMsg = "";
+        $count = 0;
+        while($row = $db->fetch_array($all)):
+                $curMsg = "<a href=\"#\" onclick=\"window.open('?q=browse/dataitem/copyright/".$row[FILE_ID]."','jav', 'width=800,height=800,resizable=yes,scrollbars');return false; \"><U>" .$result.$row[NAME]."</U/></a>";
+                if ($count == 0)
+                        $textMsg = $curMsg;
+                else
+                        $textMsg = $textMsg.", ".$curMsg;
+                $count = $count + 1;
+        endwhile;
+        $descprit = $db->r("select DESCRIPTION from DATA_ITEM where ID =".$dataitem,array());
+		switch($db->getDataItemType($dataitem))
+		{
+			case DATA_ITEM_PAGE_IMAGE:
+				$data_type = "PAGE_IMAGE";
+				break;
+			case DATA_ITEM_PAGE_ELEMENT:
+				$data_type = "PAGE_ELEMENT";
+				break;
+			case DATA_ITEM_DATASET:
+				$data_type = "DATASET";
+				break;
+			case DATA_ITEM_FILE:
+				$data_type = "FILE";
+				break;
+			default:
+				$data_type = "UNKNOWN";
+				break;
+		}
+		$data_type = "<a href=\"#\" onclick=\"window.open('?q=descript/dataitem/".$dataitem."','jav', 'width=800,height=800,resizable=yes,scrollbars');return false; \"><U>" .$data_type."</U/></a>"; 
+        // finish add
+		
+        $data_item_result = $db->q("select * from PAGE_IMAGE where ID = $dataitem",array());
+        
+        $data_item_array = $db->fetch_array($data_item_result);
+        $name = basename($data_item_array['PATH']);
+                
+                $thumb_path = dae_data_get_thumb_path($dataitem,'medium'); 
+                $image_info = linpha_getimagesize($data_item_array['PATH']);
+		
+		if(file_exists($thumb_path['image']))
+			$thumb_info = linpha_getimagesize($thumb_path['image']);
+		else
+			$thumb_info[3] = "width=\"200\" height=\"200\"";
+		
+		$info['id'] = $dataitem;
+		$info['load'] = $loadImage;
+		$info['size']['width'] = $thumb_info[0];
+		$info['size']['height'] = $thumb_info[1];
+		
+		switch($image_info['channels'])
+		{
+			case 3:
+				$colorModel = "RGB";
+				break;
+			case 4:
+				$colorModel = "CMYK";
+				break;
+			default:
+                                $colorModel = "-";
+                                break;
+                }               
+        ///Gathered data from the database and php's getimagesize() is placed in two arrays, labels and meta.  Label index
+        ///is expected to match meta index.
+        $info['label'] = array('Name','Kind','Size','Width','Height','Color Model','Color Depth','VDPI','HDPI','Copyright', 'DESCRIPTION', 'Data Type');    //copyright added by yang
+                $info['meta'] = array(
+                        "<span title=\"$name\">$name</span>",
+                        $image_info['mime'],
+                dae_data_filesize_string(filesize($data_item_array['PATH'])), //format bytes into human readable
+                $image_info[0].($image_info[1]==1?" pixel":" pixels"), //puralization
+                        $image_info[1].($image_info[1]==1?" pixel":" pixels"),
+                        $colorModel,
+                        (!empty($image_info['bits'])?$image_info['bits'].($image_info['bits']==1?" bit":" bits"):"-"),
+                        (empty($data_item_array['VDPI'])?"-":$data_item_array['VDPI']),
+                        (empty($data_item_array['HDPI'])?"-":$data_item_array['HDPI']),
+                ( $textMsg),
+                ( empty($descprit) ? "-" : $descprit),
+                ( $data_type) //add more meta data after this record
+                );
+        
+        $ui = new DataItemDetails($info);
+        
+        return $ui->getOutput();
+}
+
+function dae_data_browse_dataset_page_element($dataitem)
+{
+        $db = getDAEDatabase();
+        settype($dataitem, 'integer');
+        
+        // add by yang
+        $all = $db->q("select NAME, FILE_ID from HAS_COPYRIGHT B, FILES C where B.FILE_ID=C.ID and  B.DATA_ITEM_ID =".$dataitem,array());
+        $textMsg = "";
+        $count = 0;
+        while($row = $db->fetch_array($all)):
+                $curMsg = "<a href=\"#\" onclick=\"window.open('?q=browse/dataitem/copyright/".$row[FILE_ID]."','jav', 'width=800,height=800,resizable=yes,scrollbars');return false; \"><U>" .$result.$row[NAME]."</U/></a>";
+                if ($count == 0)
+                        $textMsg = $curMsg;
+                else
+                        $textMsg = $textMsg.", ".$curMsg;
+                $count = $count + 1;
+        endwhile;
+        $descprit = $db->r("select DESCRIPTION from DATA_ITEM where ID =".$dataitem,array());
+		switch($db->getDataItemType($dataitem))
+		{
+			case DATA_ITEM_PAGE_IMAGE:
+				$data_type = "PAGE_IMAGE";
+				break;
+			case DATA_ITEM_PAGE_ELEMENT:
+				$data_type = "PAGE_ELEMENT";
+				break;
+			case DATA_ITEM_DATASET:
+				$data_type = "DATASET";
+				break;
+			case DATA_ITEM_FILE:
+				$data_type = "FILE";
+				break;
+			default:
+				$data_type = "UNKNOWN";
+				break;
+		}
+		$data_type = "<a href=\"#\" onclick=\"window.open('?q=descript/dataitem/".$dataitem."','jav', 'width=800,height=800,resizable=yes,scrollbars');return false; \"><U>" .$data_type."</U/></a>"; 
+        // finish add
+		
+        $data_item_result = $db->q("select * from FILES where ID = $dataitem",array());
+        
+        $data_item_array = $db->fetch_array($data_item_result);
+        $name = basename($data_item_array['PATH']);
+                
+        ///Gathered data from the database and php's getimagesize() is placed in two arrays, labels and meta.  Label index
+        ///is expected to match meta index.
+        $info['label'] = array('Name','Data Type','Size', 'DESCRIPTION', 'COPYRIGHT', 'File Type');
+                $info['meta'] = array(
+                        "<span title=\"$name\">$name</span>",
+                        $data_type,
+                dae_data_filesize_string(filesize($data_item_array['PATH'])), //format bytes into human readable
+                ( empty($descprit) ? "-" : $descprit),
+                ( $textMsg),
+                ( finfo_file($data_item_array['PATH'])) //add more meta data after this record
+                );
+        $info['id'] = $dataitem;
+        $info['NAME'] = $data_item_array['PATH'];
+        $ui = new DataItemDetails($info);
+        
+        return $ui->getOutput();
+}
+
+/*
+*	Display meta information: 'Name','Data Type','Size', 'DESCRIPTION', 'COPYRIGHT', 'File Type'.
+*/
+function dae_data_browse_dataset_file($dataitem)
+{
+        $db = getDAEDatabase();
+        settype($dataitem, 'integer');
+        
+        // add by yang
+        $all = $db->q("select NAME, FILE_ID from HAS_COPYRIGHT B, FILES C where B.FILE_ID=C.ID and  B.DATA_ITEM_ID =".$dataitem,array());
+        $textMsg = "";
+        $count = 0;
+        while($row = $db->fetch_array($all)):
+                $curMsg = "<a href=\"#\" onclick=\"window.open('?q=browse/dataitem/copyright/".$row[FILE_ID]."','jav', 'width=800,height=800,resizable=yes,scrollbars');return false; \"><U>" .$result.$row[NAME]."</U/></a>";
+                if ($count == 0)
+                        $textMsg = $curMsg;
+                else
+                        $textMsg = $textMsg.", ".$curMsg;
+                $count = $count + 1;
+        endwhile;
+        $descprit = $db->r("select DESCRIPTION from DATA_ITEM where ID =".$dataitem,array());
+		switch($db->getDataItemType($dataitem))
+		{
+			case DATA_ITEM_PAGE_IMAGE:
+				$data_type = "PAGE_IMAGE";
+				break;
+			case DATA_ITEM_PAGE_ELEMENT:
+				$data_type = "PAGE_ELEMENT";
+				break;
+			case DATA_ITEM_DATASET:
+				$data_type = "DATASET";
+				break;
+			case DATA_ITEM_FILE:
+				$data_type = "FILE";
+				break;
+			default:
+				$data_type = "UNKNOWN";
+				break;
+		}
+		$data_type = "<a href=\"#\" onclick=\"window.open('?q=descript/dataitem/".$dataitem."','jav', 'width=800,height=800,resizable=yes,scrollbars');return false; \"><U>" .$data_type."</U/></a>"; 
+        // finish add
+		
+        $data_item_result = $db->q("select * from FILES where ID = $dataitem",array());
+        
+        $data_item_array = $db->fetch_array($data_item_result);
+        $name = basename($data_item_array['PATH']);
+        /** \todo This is related to the MIME problem related a few lines of code further */
+		//$finfo = finfo_open(FILEINFO_MIME_TYPE); 
+               
+        ///Gathered data from the database and php's getimagesize() is placed in two arrays, labels and meta.  Label index
+        ///is expected to match meta index.
+        $info['label'] = array('Name','Data Type','Size', 'DESCRIPTION', 'COPYRIGHT', 'File Type');
+                $info['meta'] = array(
+                        "<span title=\"$name\">$name</span>",
+                        $data_type,
+                dae_data_filesize_string(filesize($data_item_array['PATH'])), //format bytes into human readable
+                ( empty($descprit) ? "-" : $descprit),
+                ( $textMsg),
+                /** \todo Solve the mime problem on Solaris. Normally the following code should work, but it doesn't */
+                /*
+                ( finfo_file($finfo, $data_item_array['PATH'])) //add more meta data after this record */
+                ( 'Unknown') //add more meta data after this record
+                
+                );
+        $info['id'] = $dataitem;
+        $ui = new DataItemDetails($info);
+        
+        return $ui->getOutput();
+}
+/**
+ * This function returns thumbnails for page images
+ *  
+ * @param arg(3) - the id of the page image to get a thumbnail for
+ * @param arg(4) - the desired size for the thumbnail (small, medium, large, original)
+ *
+ * Returns thumbnail
+ */
+function dae_data_browse_dataset_thumb()
+{       
+        $size = arg(4);
+	$data_item = arg(3);	
+	
+	$thumbnail = dae_data_get_thumb_path($data_item,$size);
+	extract($thumbnail);
+	
+	$expires = 60*60*24*14;
+        drupal_set_header("content-type: ".$content);
+        drupal_set_header("Content-Length: " . filesize($image));
+        drupal_set_header("Expires: ".gmdate('D, d M Y H:i:s', time()+$expires) . ' GMT');
+        drupal_set_header("Cache-Control: max-age=$expires"); ///Attempting to keep image cached
+        $file = fopen($image, 'rb');
+        fpassthru($file);
+        exit;
+}
+/**
+ * This function helps dae_data_browse_dataset_thumb find the correct path
+ *  
+ * @param $data_item - the id of the page image to get a thumbnail for
+ * @param $size - the desired size of the thumbnail (small, medium, large, original)
+ *
+ * In general I have found it is best to always return a thumbnail rather than the original
+ * because of issues with mime types.  Thumbnails are always png
+ *
+ * @return - true if it is only an integer or false if it is not
+ */
+function dae_data_get_thumb_path($data_item = 0,$size)
+{
+    $db = getDAEDatabase();
+    settype($data_item, 'integer');
+    
+	$data_item_result = $db->q("select PATH from PAGE_IMAGE where ID=" .$data_item,array());
+	
+	$image = $db->fetch_array($data_item_result);
+	$image = $image['PATH'];
+	
+	if(file_exists($image))
+	{
+		//$finfo = finfo_open(FILEINFO_MIME_TYPE);
+		//$content = finfo_file($finfo, $image);
+		$info = linpha_getimagesize($image);
+		$content = $ingfo['mime_type'];
+	}
+	
+	$nothumb_medium = drupal_get_path("module","dae_ui")."/images/dae_data/nothumb.jpg";
+	$nothumb_small = drupal_get_path("module","dae_ui")."/images/dae_data/small-doc-thumb.jpg";
+	
+	switch($size)
+	{
+		case 'original':
+			break;
+		case 'large':
+			if(file_exists($image."-tn-1000.png")):
+				$image = $image."-tn-1000.png";
+				$content = "image/png";
+			else:
+				$content = $info['mime_type'];
+			endif;
+			break;
+		case 'medium':
+			if(file_exists($image."-tn-250.png")):
+				$image = $image."-tn-250.png";
+				$content = "image/png";
+			else:
+				$image = $nothumb_medium;
+				$content = "image/jpeg";
+			endif;
+			break;
+		case 'small':
+			if(file_exists($image."-tn-75.png")):
+				$image = $image."-tn-75.png";
+				$content = "image/png";
+			else:
+				$image = $nothumb_small;
+				$content = "image/jpeg";
+			endif;
+			break;
+		default:
+			if(file_exists($image."-tn-1000.png")):
+				$image = $image."-tn-1000.png";
+				$content = "image/png";
+			else:
+				$content = $info['mime_type'];
+			endif;
+			break;
+	}
+        
+        return array('content' => $content, 'image' => $image);
+}
+
+/**
+ * This function spits out the uri encoding of a dataset image.
+ * It uses dae_get_thumb_uri
+ */
+function dae_data_browse_dataset_thumb_uri() {
+  $dataitem = arg(4);
+  $size =  arg(5);
+  echo dae_data_get_thumb_uri($dataitem, $size);
+}
+
+
+/**
+ * This function finds the correct dataset image and returns
+ * the uri incoding.
+ *
+ * @param $data_item - the id of the page image to get a thumbnail for
+ * @param $size - the desired size of the thumbnail (small, medium, large, original)
+ * 
+ */
+function dae_data_get_thumb_uri($data_item = 0,$size)
+{
+    $db = getDAEDatabase();
+    settype($data_item, 'integer');
+    
+	$data_item_result = $db->q("select PATH from PAGE_IMAGE where ID=" .$data_item,array());
+	
+	$image = $db->fetch_array($data_item_result);
+	$image = $image['PATH'];
+	
+	if(file_exists($image))
+	{
+		//$finfo = finfo_open(FILEINFO_MIME_TYPE);
+		//$content = finfo_file($finfo, $image);
+		$info = linpha_getimagesize($image);
+		$content = $info['mime_type'];
+	}
+	
+	$nothumb_medium = drupal_get_path("module","dae_ui")."/images/dae_data/nothumb.jpg";
+	$nothumb_small = drupal_get_path("module","dae_ui")."/images/dae_data/small-doc-thumb.jpg";
+	
+	switch($size)
+	{
+		case 'original':
+			break;
+		case 'large':
+			if(file_exists($image."-tn-1000.png")):
+				$image = $image."-tn-1000.png";
+				$content = "image/png";
+			else:
+				$content = $info['mime_type'];
+			endif;
+			break;
+		case 'medium':
+			if(file_exists($image."-tn-250.png")):
+				$image = $image."-tn-250.png";
+				$content = "image/png";
+			else:
+				$image = $nothumb_medium;
+				$content = "image/jpeg";
+			endif;
+			break;
+		case 'small':
+			if(file_exists($image."-tn-75.png")):
+				$image = $image."-tn-75.png";
+				$content = "image/png";
+			else:
+				$image = $nothumb_small;
+				$content = "image/jpeg";
+			endif;
+			break;
+		default:
+			if(file_exists($image."-tn-1000.png")):
+				$image = $image."-tn-1000.png";
+				$content = "image/png";
+			else:
+				$content = $info['mime_type'];
+			endif;
+			break;
+	}
+  $contents = file_get_contents($image);
+  $base64 = base64_encode($contents);
+  return "data:$content;base64,$base64";
+}
+
+/**
+ * This function formats a number of bytes into a human readable format
+ *  
+ * @param $bytes - an integer number of bytes to convert
+ *
+ * @return - a string representing the number of giga, mega or kilobytes
+ */
+function dae_data_filesize_string($bytes)
+{
+                $gb = 1073741824;
+		$mb = 1048576;
+		$kb = 1024;
+	
+		if($bytes >= $gb)
+			$s = sprintf("%.2f",$bytes/$gb) . " GB";
+		else if($bytes >= $mb)
+			$s = sprintf("%.2f",$bytes/$mb) . " MB";
+		else
+			$s = sprintf("%.2f",$bytes/$kb) . " KB";
+                
+                return $s;
+}
+/**
+ * Depricated.  This function determines whether or not a file should be considered an image.
+ *  
+ * @todo - Remove/Update.  All page images must be displayed images, and all thumbnails are png so this function is not necessary
+ *
+ * @param $dataitem - the id of the data item to check
+ *
+ * @return - the mimetype of the file
+ */
+function dae_data_is_image($dataitem)
+{
+    $db = getDAEDatabase();
+	settype($dataitem, 'integer');
+	
+	$mime = $db->r("SELECT DESCRIPTION FROM ASSOCIATE_DATATYPE_DATA_ITEM JOIN DATATYPE ON ID = DATATYPE_ID WHERE DATA_ITEM_ID = $dataitem",array());
+	
+	if($mime)
+		return $mime;
+	else
+	{
+		$path = $db->r("SELECT PATH FROM PAGE_IMAGE WHERE ID = $dataitem",array());
+		if($path)
+		{
+			$base = basename($path);
+			$ext = explode(".",$base);
+			$ext = $ext[count($ext)-1];
+			return (preg_match("/$ext/i",variable_get('dae_data_extensions', 'png jpg jpeg tif tiff bmp gif')));
+		}
+		else
+			return "text/plain";
+        }
+        
+}
+/**
+ * This function returns mime types for files based on their extension
+ *  
+ * @param $path - a string that at minimum contains a file with an extension
+ *
+ * @return - a string representing the mimetype of the file
+ */
+function dae_data_mime($path)
+{
+        $file = basename($path);
+	$ext = explode(".",$path);
+	$ext = $ext[count($ext)-1];
+
+	switch(strtolower($ext))
+	{
+  		case "png": $content="image/png"; break;
+  		case "jpeg":
+  		case "jpg": $content="image/jpg"; break;
+  		case "gif": $content="image/gif"; break;
+  		case "bmp": $content="image/bmp"; break;
+  		case "xml": $content="txt/xml"; break;
+  		case "txt": $content="text/plain"; break;
+  		case "pdf": $content="application/pdf"; break;
+  		case "pbm": $content="image/x-portable-bitmap"; break;
+  		case "tif":
+  		case "tiff": $content="image/tiff"; break;
+  		case "zip": $content="application/zip"; break;
+  		case "gz":  $content="application/x-zip"; break;
+  		  		
+  		default: $content=$default;
+        }
+        return $content;
+}
+/**
+ * This provides information on a data item's rating.  By default, the function checks
+ * to see if the current user has rated the data item, and if so it returns 1 to signify
+ * that the user has rated it, and the integer rating that the current user gave the 
+ * data item.  If the current user has not rated the data item, or $showMyRating is set
+ * to false, it will return the average rating from all users for the given data item
+ *  
+ * @param $dataitem - the id of the data item to retrieve a rating for
+ * @param $showMyRating - whether or not to show the current user's rating or the average rating
+ * @param $uid - if you want a rating from a given user, use this.
+ *
+ * @return - an array containing ['rated'] - 1 if the current user has rated the data item, 0 if not
+ *                                                               ['rating'] - either the average rating for the data item or the current
+ *                                                                                       user's rating 
+ */
+function dae_data_get_rating($dataitem,$showMyRating = true, $uid = null)
+{
+        global $user, $db;
+        settype($dataitem, 'integer');
+        
+        if($uid)
+        {
+            settype($uid, 'integer');
+            $out['rating'] = $db->r("SELECT RATING FROM DAE_DATAITEM_RATING WHERE DATA_ITEM = $dataitem AND USER_ID = $uid",array())/5;
+            $out['rated'] = 0;
+        }
+        else
+        {
+            $uid = getPID($user->uid);
+                    
+            if(dae_data_rating_exists($dataitem))
+                $out['rated'] = "1";
+            else
+                $out['rated'] = "0";
+        
+            if($showMyRating && $out['rated'])
+                $out['rating'] = $db->r("SELECT RATING FROM DAE_DATAITEM_RATING WHERE DATA_ITEM = $dataitem AND USER_ID = $uid",array())/5;
+            else
+                $out['rating'] = $db->r("SELECT AVG(RATING) FROM DAE_DATAITEM_RATING WHERE DATA_ITEM = $dataitem",array())/5;
+        }
+        return $out;
+}
+/**
+ * This checks to see if the authenticated user has a saved rating for the given data item
+ *  
+ * @param $dataitem - the id of the data item to check for an existing rating
+ *
+ * @return - true/false
+ */
+function dae_data_rating_exists($dataitem)
+{
+        global $user, $db;
+        settype($dataitem, 'integer');
+        return $db->r("SELECT RATING FROM DAE_DATAITEM_RATING WHERE DATA_ITEM = $dataitem AND USER_ID = ". getPID($user->uid),array()) > 0;
+}
+/**
+ * This function is used to autocomplete the search bar on the data browsing pages
+ *  
+ * @param $_GET['term'] - the search term for tags and datasets
+ *
+ * @return - json containing an id (address), label, value and category
+ */
+function dae_data_search_tag()
+{
+    $query = check_plain($_GET['term']);
+	 
+	$db = getDAEDatabase();
+	
+	$variables[':query'] = strtolower($query).'%';
+	
+	$datasetsAndTags = $db->q('
+						select ID, NAME from(
+						select distinct ID, NAME
+						from DATASET 
+						where lower(NAME) like :query
+						union
+						select distinct 0,VALUE
+                                                from TAG
+                                                where lower(VALUE) like :query
+                                                ) where  rownum <= 25
+                                                ',$variables); ///max of 25 right now
+                                                
+        
+        $i = 0;
+        $search_results = array();
+        while($row = $db->fetch_array($datasetsAndTags)):
+                
+                if($row['ID'] != 0):
+                        $search_results[$i]['id'] = "dataitem/".$row['ID'];
+                        $search_results[$i]['label'] = $row['NAME'];
+                        $search_results[$i]['value'] = $row['NAME'];
+			$search_results[$i]['category'] = "Datasets";
+		else:
+			$search_results[$i]['id'] = "tags/".$row['NAME'];
+			$search_results[$i]['label'] = $row['NAME'];
+			$search_results[$i]['value'] = $row['NAME'];
+			$search_results[$i]['category'] = "Tags";
+		endif;
+		$i++;
+		
+	endwhile;
+        
+    return drupal_json($search_results);   
+}
+/**
+ * This function adds to a data item's popularity rating for the day
+ *  
+ * @param $dataitem - the id of the data item to increase popularity
+ * @param $amount - the integer amount to increment popularity
+ *                                      Certain usage increases popularity more than other usage
+ *
+ * 
+ *
+ */
+function dae_data_increment_activity($dataitem,$amount)
+{
+    if($amount > 0) {
+		$db = getDAEDatabase();
+		settype($dataitem, 'integer');
+		settype($amount, 'integer');
+		$update = $db->r("SELECT COUNT(*) FROM DAE_DATAITEM_POPULAR WHERE ROUND(SYSDATE - POPULAR_DATE) < 1 AND DATA_ITEM = $dataitem",array());
+		
+		if($update > 0)
+			$db->i("UPDATE DAE_DATAITEM_POPULAR SET ACTIVITY=ACTIVITY+$amount WHERE DATA_ITEM = $dataitem AND ROUND(SYSDATE - POPULAR_DATE) < 1",array());
+		else
+            $db->i("INSERT INTO DAE_DATAITEM_POPULAR VALUES($dataitem,$amount,SYSDATE)",array());
+        }
+}
+        
+
+/**
+ * \brief Displays detailed information of a selected TAG in the TAG dropdown list.
+ */
+//added by yil308 for dropdown list.
+function dae_data_search_select()
+{
+ 	$query = check_plain(arg(3));
+ 	$variables[':query'] = strtolower($query).'%';
+	 
+	$db = getDAEDatabase();
+	 
+	$datasetsAndTags = $db->q("
+						select ID, NAME from(
+						select distinct ID, NAME
+						from DATASET 
+						where lower(NAME) like :query
+						union
+						select distinct 0,VALUE
+						from TAG
+						where lower(VALUE) like :query
+						) where  rownum <= 25
+						",$variables);
+						
+	
+	$i = 0;
+	$search_results = array();
+	while($row = $db->fetch_array($datasetsAndTags)):
+		
+		if($row['ID'] > 0):
+			$search_results[$i]['id'] = "dataitem/".$row['ID'];
+			$search_results[$i]['label'] = $row['NAME'];
+			$search_results[$i]['value'] = $row['NAME'];
+			$search_results[$i]['category'] = "Datasets";
+		else:
+			$search_results[$i]['id'] = "tags/".$row['NAME'];
+			$search_results[$i]['label'] = $row['NAME'];
+			$search_results[$i]['value'] = $row['NAME'];
+			$search_results[$i]['category'] = "Tags";
+		endif;
+		$i++;
+		
+	endwhile;
+        
+        drupal_json($search_results);
+}
+
+function dae_data_download_access($accessRights) {
+    if(! in_array(ip_address(),explode(',',variable_get('dae_data_passthrough_ip',null))) ) {
+    	drupal_set_message('Checking access rights: '. print_r($accessRights,true),warning);
+        return user_access($accessRights);
+    }
+    else 
+        return true;
+}
+
+function dae_data_search($op = 'search', $keys = NULL) {
+    /** Currently not implemented but default function chokes on  browse/tags/search **/
+    return null;
+}
+    
+function dae_data_update_index() {
+    /** Currently not implemented but default function chokes on  browse/tags/search **/
+}
+
+/**
+ * Gets page images of a given parent directory
+ * @param $id the id of the directory to check
+ * @param $db DAEdatabase
+ */
+function get_page_elements($id, $db) {
+  $query = "select ID from
+					(
+						SELECT ID, row_number() over(order by id) as r
+            FROM INCLUDES_PAGE_IMAGE,PAGE_IMAGE
+            WHERE DATASET_ID=".$id." and PAGE_IMAGE_ID=ID
+          )";
+  $all  = $db->q($query, array());
+  return $all;
+}
+/**
+ * Gets sub directories of a given parent directory
+ * @param $id the id of the directory to check
+ * @param $db DAEdatabase
+ */
+function get_directories($id, $db) {
+  $query =
+   "select distinct ID 
+    from DATASET,ASSOCIATE_DATASET 
+    where ASSOCIATING_DATASET_ID=ID 
+    and DATASET_ID = $id";
+  $contains = $db->q($query ,array());
+  return $contains;
+}

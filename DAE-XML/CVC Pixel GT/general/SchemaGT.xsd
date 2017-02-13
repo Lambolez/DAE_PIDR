@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+  <xs:element name="textGt">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="textLine" maxOccurs="unbounded" />
+      </xs:sequence>
+      <xs:attribute name="height" type="xs:integer" use="required" />
+      <xs:attribute name="width" type="xs:integer" use="required" />
+      <xs:attribute name="doc_v" type="xs:integer" use="required" />
+      <xs:attribute name="image_name" type="xs:string" use="required" />
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="textLine">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="word" minOccurs="0" maxOccurs="unbounded" />
+        <xs:element ref="atom" minOccurs="0" maxOccurs="unbounded" />
+      </xs:sequence>
+      <xs:attribute name="id" type="xs:integer" use="required" />
+      <xs:attribute name="Transcription" type="xs:string" use="required" />
+      <xs:attribute name="Xmin" type="xs:integer" use="required" />
+      <xs:attribute name="Xmax" type="xs:integer" use="required" />
+      <xs:attribute name="Ymin" type="xs:integer" use="required" />
+      <xs:attribute name="Ymax" type="xs:integer" use="required" />
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="word">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="atom" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+      <xs:attribute name="id" type="xs:integer" use="required" />
+      <xs:attribute name="Transcription" type="xs:string" use="required" />
+      <xs:attribute name="Xmin" type="xs:integer" use="required" />
+      <xs:attribute name="Xmax" type="xs:integer" use="required" />
+      <xs:attribute name="Ymin" type="xs:integer" use="required" />
+      <xs:attribute name="Ymax" type="xs:integer" use="required" />
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="atom">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="cc" minOccurs="1" maxOccurs="unbounded" />
+      </xs:sequence>
+      <xs:attribute name="id" type="xs:integer" use="required" />
+      <xs:attribute name="Transcription" type="xs:string" use="required" />
+      <xs:attribute name="SplitByDesign" type="xs:boolean" use="required" />
+      <xs:attribute name="MergedByDesign" type="xs:boolean" use="required" />
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="cc">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="area" minOccurs="1" maxOccurs="1" />
+        <xs:element ref="skeleton" minOccurs="1" maxOccurs="1" />
+      </xs:sequence>
+      <xs:attribute name="perimeterLength" type="xs:integer" use="required" />
+      <xs:attribute name="id" type="xs:integer" use="required" />
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="area">
+    <xs:complexType>
+      <xs:sequence>
+	<xs:element name="xpoints" type="intlist" />
+	<xs:element name="ypoints" type="intlist" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="skeleton">
+    <xs:complexType>
+      <xs:sequence>
+	<xs:element name="xpoints" type="intlist" />
+	<xs:element name="ypoints" type="intlist" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:simpleType name="intlist">
+    <xs:list itemType="xs:integer"/>
+  </xs:simpleType>
+
+</xs:schema>

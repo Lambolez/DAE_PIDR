@@ -1,0 +1,8 @@
+;$Id:$
+name = DAE Home Directory
+description = "This module creates user directories and allows creation of subdirectories."
+core = 6.x
+package = DAE Modules
+dependencies[] = daedatabase
+dependencies[] = dae_ui
+dependencies[] = profile

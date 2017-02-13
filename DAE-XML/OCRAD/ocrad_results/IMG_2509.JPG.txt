@@ -1,0 +1,3 @@
+# Ocr Results File. Created by GNU Ocrad version 0.16
+source file IMG_2509.JPG.pgm
+total text blocks 0

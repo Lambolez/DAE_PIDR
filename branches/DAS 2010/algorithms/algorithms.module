@@ -1,0 +1,92 @@
+<?php
+// $Id:$
+
+/**
+ * @file algorithms.module
+ *
+ * The algorithms module allows users to run algorithms.
+ */
+
+require_once(drupal_get_path("module","home_directory")."/home_directory_uploads.var"); //keep path in one place
+
+function algorithms_menu() 
+{
+  $items = array();
+
+	$items['algorithms'] = array (
+	'title' => 'Algorithms',
+	'description' => 'Available Algorithms',
+    'page callback' => 'algorithms_list',
+    'file' => 'algorithms_run.inc',
+	'access arguments' => array('view public algorithms'),
+	);
+	$items['run'] = array (
+	'title' => 'Run',
+	'description' => 'Run chosen Algorithm',
+    'page callback' => 'algorithms_run',
+    'file' => 'algorithms_run.inc',
+	'access arguments' => array('run algorithms'),
+	'type' => 'MENU_CALLBACK'
+	);
+	$items['run/go'] = array (
+	'title' => 'Running',
+	'description' => 'Running',
+    'page callback' => 'algorithms_run_go',
+    'file' => 'algorithms_run.inc',
+	'access arguments' => array('run algorithms'),
+	'type' => 'MENU_CALLBACK'
+	);
+	$items['run/copy'] = array (
+	'title' => 'Copying',
+	'description' => 'Copying',
+    'page callback' => 'algorithms_copy_run',
+    'file' => 'algorithms_copy.inc',
+	'access arguments' => array('run algorithms'),
+	'type' => 'MENU_CALLBACK'
+	);
+	$items['admin/settings/algorithms'] = array (
+	'title' => 'Algorithm Settings',
+	'description' => 'Configure Algorithm settings.',
+    'access arguments' => array('administer site configuration'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('algorithms_admin'),
+    'file' => 'algorithms.admin.inc',
+	);
+    return $items;
+}
+
+function algorithms_list()
+{
+
+	$db = getDAEDatabase();
+	
+	if(user_access('view all algorithms'))
+		$algoResultSet = $db->q("select * from ALGORITHM where PATH is not null");
+	else
+		$algoResultSet = $db->q("select * from ALGORITHM where PATH is not null"); //ADD where clause for public checkbox
+
+	
+	$output = "<ul id=\"hd-algorithms\">";
+	
+	while($row = $db->fetch_array($algoResultSet,DATABASE_BOTH)):
+	
+		$output .= "<li><strong>" . (user_access('run algorithms')?l($row['NAME'],"run/".$row['ID']):$row['NAME']) . "</strong> - <a href=\"#\" onClick=\"show_desc('#al_".$row['ID']."')\">Version " . $row['VERSION'] ."</a>";
+		
+		$output .= "<div id=\"al_".$row['ID']."\" class=\"hd-algo_desc\">";
+		
+		$output .= $row['DESCRIPTION'] . "<br/>";
+		
+		$output .= "</div></li>";
+	
+	endwhile;
+	
+	$output .= "</ul>";
+	
+	return $output;
+
+} 
+
+function algorithms_perm()
+{
+	return array('view public algorithms', 'run algorithms','view all algorithms', 'unlimited runs');
+}

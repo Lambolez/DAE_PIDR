@@ -1,0 +1,209 @@
+#create-new-annotation-task{
+  display:block;
+  float:right;
+  margin-top:25px;
+  background: #0077C2;
+  padding:5px 10px;
+  border-radius:3px;
+  color:#fff;
+  text-shadow:-1px 1px 0px rgba(0,0,0,0.7);
+  cursor:pointer;
+}
+
+#create-new-annotation-task span{
+  font-weight:bold;
+  margin-right:5px;
+}
+
+#create-new-annotation-task:hover{
+  background: #003557;
+  text-decoration:none;
+}
+
+#annotation-gui-console{
+  border-bottom: 1px solid #ccc;
+  margin-bottom: 25px;
+  padding-bottom:25px;
+}
+
+#annotation-gui-console #annotation-toolbar{
+  height:40px;
+  background:#e5e5e5;
+  margin-bottom:25px;
+  border:1px solid #fff;
+  box-shadow:0px 2px 6px rgba(0,0,0,0.3)
+}
+
+#annotation-gui-console #annotation-toolbar .new-widget-button{
+  float:left;
+  line-height: 30px;
+  margin:5px 0 0 5px;
+  padding:0 10px;
+  text-shadow: -1px 1px 0px #fff;
+  cursor:pointer;
+}
+
+#annotation-gui-console #annotation-toolbar .new-widget-button.edit-tools{
+  float:right;
+  margin:5px 5px 0 0;
+}
+
+#annotation-gui-console #annotation-toolbar .new-widget-button:hover{
+  color:#003557;
+}
+
+#annotation-gui-console #annotation-gui-preview {
+  background:#e5e5e5;
+  border:5px solid #fff;
+  outline:1px solid #ccc;
+  text-align:center;
+}
+
+#annotation-gui-console #annotation-gui-preview .widget{
+  background:#fff;
+  margin:5px;
+  padding:0 5px;
+  border:1px solid #fff;
+  line-height: 25px;
+  min-height:25px;
+  cursor:move;
+  position:relative;
+  text-align:left;
+  -webkit-transform: height 0.2s;
+}
+
+#annotation-gui-console #annotation-gui-preview .widget .widget-control{
+  width:25px; 
+  height:25px;
+  background:#ccc;
+  position:absolute;
+  right:0;
+  top:0;
+  display:none;
+  cursor: pointer;
+  text-align: center;
+}
+
+#annotation-gui-console #annotation-gui-preview .widget .widget-control.edit-widget{
+  right:26px;
+}
+
+#annotation-gui-console #annotation-gui-preview .widget .widget-name{
+  position:absolute;
+  top:0;
+  right:52px;
+  padding:0 10px;
+  background:#e5e5e5;
+  width:auto;
+  display:none;
+  border-left:5px solid #fff;
+}
+
+#annotation-gui-console #annotation-gui-preview .widget .widget-control:hover{
+  background:#003557; 
+  color:#fff;
+}
+
+#annotation-gui-console #annotation-gui-preview .widget:hover{
+  border-color:#003557;
+}
+
+#annotation-gui-console #annotation-gui-preview .widget:hover .widget-control,
+#annotation-gui-console #annotation-gui-preview .widget:hover .widget-name{
+  display: block;
+}
+
+#annotation-gui-console #annotation-gui-preview .widget .widget-html-option{
+  margin-right: 10px;
+}
+
+#annotation-gui-console #annotation-gui-preview .widget .widget-html-option input{
+  margin-right:3px
+}
+
+#annotation-gui-console #annotation-gui-preview .widget.document{
+  position:relative;
+  height:100%;
+  min-height:200px;
+}
+
+#annotation-gui-console #annotation-tools-container{
+  position:absolute;
+  right:0; top:0;
+  border-left:5px solid #e2e2e2;
+  min-height:100%;
+  width:150px;
+  margin-top:-1px;
+  padding:1px 0;
+}
+
+#annotation-gui-console #annotation-tools-container div{
+  padding:10px;
+}
+
+#annotation-gui-preview #annotation-immediate-instr{
+  line-height:50px;
+  padding:0 25px;
+  font-style:italic;
+}
+
+#annotation-popup-outer{
+  width:100%;
+  height:100%;
+  position:fixed;
+  top:0; left:0;
+  background:rgba(0,0,0,0.5);
+  z-index:999;
+}
+
+#annotation-popup-content{
+  width:425px;
+  margin: 175px auto;
+  padding:25px;
+  background:#fff;
+  border-radius:5px;
+  box-shadow:9px 9px 40px rgba(0,0,0,0.5);
+  border:3px solid #D7ECFF;
+  text-align:right;
+}
+
+#annotation-popup-content input, #annotation-popup-content textarea {
+  width:350px;
+  margin-left:10px;
+}
+
+#annotation-popup-content #tools-options-container{
+  text-align: left;
+}
+
+#annotation-popup-content #tools-options-container input{
+  width:auto;
+  margin-right:10px;
+}
+
+#annotation-popup-content .widget-name-container{
+  padding-bottom:15px;
+  margin-bottom:25px;
+  border-bottom:1px solid #e5e5e5;
+}
+
+#annotation-popup-content .widget-name-container .widget-name-instr{
+  font-size:10px; color:#999; font-style: italic;
+}
+
+#annotation-popup-content .option{
+  cursor:move;
+  margin-bottom:10px;
+}
+
+#annotation-popup-content .option:hover{
+  background:#e3e3e3;
+}
+
+#annotation-popup-content .delete-from-popup{
+  float:left;
+}
+
+#annotation-popup-content .popup-form{
+  margin-bottom:15px;
+}

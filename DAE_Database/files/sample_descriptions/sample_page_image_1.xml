@@ -1,0 +1,42 @@
+<meta>
+
+<item>
+<type>page_image</type>
+<path>sample_data/level_1_1.txt</path>
+<status>1</status>
+<description>this is image level_1_1</description>
+<copyright>limited distribution.</copyright>
+<v_dpi>300</v_dpi>
+<h_dpi>300</h_dpi>
+<skew>5</skew>
+<responsible_for attr="false">des308@lehigh.edu</responsible_for>
+<generates_pi attr="false">1</generates_pi>
+</item>
+
+<item>
+<type>page_image</type>
+<path>sample_data/level_1_2.txt</path>
+<status>1</status>
+<description>this is image level_1_2</description>
+<copyright>limited distribution.</copyright>
+<v_dpi>200</v_dpi>
+<h_dpi>250</h_dpi>
+<skew>10</skew>
+<responsible_for attr="false">des308@lehigh.edu</responsible_for>
+<generates_pi attr="false">2</generates_pi>
+</item>
+
+<item>
+<type>page_image</type>
+<path>sample_data/level2/level_2_1.txt</path>
+<status>1</status>
+<description>this is image level_2_1.</description>
+<copyright>limited distribution.</copyright>
+<v_dpi>100</v_dpi>
+<h_dpi>100</h_dpi>
+<skew>2</skew>
+<responsible_for attr="false">des308@lehigh.edu</responsible_for>
+<generates_pi attr="false">2</generates_pi>
+</item>
+
+</meta>

@@ -1,0 +1,10 @@
+; $Id:  $
+core            = "6.x"
+dependencies[]  = services
+description     = "Provides a DAE service Examples."
+name            = "Service Examples"
+package         = "DAE Services"
+
+version = "6.x-0.1"
+project = "DAE services"
+

@@ -1,0 +1,750 @@
+<?php 
+// $Id:$
+
+/**
+ * @file
+ * The implementation of a SOAP Server for the Services module.
+ * 
+ * Listens on:
+ *   services/soap
+ * 
+ * WSDL Interface:
+ *   services/soap?wsdl
+ *   
+ * @TODO Cite original source from Drupal module.
+ * 
+ * This module has been significantly rewritten in order to accomodate the changes (especially new type definitions)
+ * required by the DAE project.
+ * 
+ */
+ 
+require_once("./".drupal_get_path('module','daedatabase')."/daedatabase_db.inc");
+require_once("./".drupal_get_path('module','dae_ui')."/dae_ui.module");
+
+global $db;
+
+function declareDAEType($soap_server,$name, $id, $typeInfo)
+{
+	global $db;
+	
+    $SOAPType = array();
+    $TNAME = str_replace(array(' ','/'), array('_','_'), $name);
+    
+    /*
+     * If parameter is not a dataset, just define it as a simple WSDL type
+     */
+    if($typeInfo != 'dataset') {
+    	/**
+         * @TODO there is no reason 'xsd:string' be hard-coded, here.
+         * This should be changed as soon as the data model accepts this.
+         * This can be done by using the currently (as of June 2011) unused
+         * DATATYPE.TYPE field.
+     	*/
+    	$SOAPType[$TNAME] = array('name'=>$TNAME, 'type'=>'xsd:string');
+        $typeName = 'dae_'.$TNAME.'_'.$id;
+    	
+    	$soap_server->wsdl->addComplexType(
+    		$typeName,
+    		'complexType',
+    		'struct',
+    		'all',
+    		'',
+    		$SOAPType
+    	);
+    }
+    else {
+    	/*
+    	 * We shall assume that dataset are either called XXX_array, in which case
+    	 * XXX is supposed to be an existing DATATYPE.name, either it will be considered as 
+    	 * an array of strings.
+    	 */
+    	if(preg_match('/(.+)_array$/i',$TNAME,$matches)) {
+    		
+    		/*
+    		 * Check if the supposed DATATYPE.name is already covered by an algorithm's
+    		 * I/O (i.e. there's a DATA element associated to this type)
+    		 */
+    		/**
+    		 * @BUG we're supposing here that DATATYPE.names are unique ... the datamodel
+    		 * does not actually enforce this (although the user interface tries somehow
+    		 * to avoid having duplicate names)
+    		 */
+    		$subDataTypeName = $matches[1];
+    		$variables[':datatypename'] = $subDataTypeName;
+    		$query = 'select distinct(DATATYPE.ID), DATATYPE.DATA_ITEM_TYPE as ITEMTYPE
+          				from DATATYPE
+          				join TYPE_OF on DATATYPE.ID = TYPE_OF.DATATYPE_ID
+          				join DATA on DATA.ID = TYPE_OF.DATA_ID
+          				where DATATYPE.NAME = :datatypename
+          				  and
+                			( DATA.ID in (select AI.DATA_ID from ALGORITHM_INPUT AI) 
+                 			  or 
+                        	  DATA.ID in (select AO.DATA_ID from ALGORITHM_OUTPUT Ao)
+                			)
+                		order by DATATYPE.ID';
+
+			$subDataType = $db->q($query,$variables);
+			if($result =  $db->fetch_array($subDataType)) {
+				$typeName = 'tns:dae_'.str_replace(array(' ','/'), array('_','_'), $subDataTypeName).'_'.$result['ID'];
+				
+				/*
+				 * Although the previous line would seem the most appropriate, we're defaulting it to xsd:string for
+				 * now.
+				 * 
+				 * It all has to do with the fact that Taverna (the default tool we promote for easy service 
+				 * orchestration) has some fairly strict typing involved and that a "bag of bananas" is not a "bag of fruit"
+				 * so casting from one dataset to another can be problematic in some environments.
+				 * 
+				 */
+				/**
+				 * @todo solve this typing issue in a more satisfactory way
+				 */
+				$typeName = 'xsd:string';
+			}
+			else {
+				/*
+				 * The supposed DADATYPE.name is not associated to some algorithm's I/O
+				 * It must therefore be declared as a new WSDL type.
+				 */
+				$typeName = declareDAEType($soap_server,$subDataTypeName, $result['ID'], $result['ITEMTYPE']);
+			}
+    		
+    	}
+    	else {
+    		$typeName = 'xsd:string';
+    	}
+    	
+    	$soap_server->wsdl->addComplexType(
+    		'dae_'.$TNAME.'_'.$id,
+    		'complexType', 'array', '', 'SOAP-ENC:Array', array(),
+    		array(
+           		array(
+              		'ref' => 'SOAP-ENC:arrayType',
+              		'wsdl:arrayType' => $typeName.'[]'
+            	)
+         	),
+    		$typeName
+		);        
+    }
+    
+    return $typeName;
+}
+
+/**
+ * Implementation of hook_menu()
+ */ 
+function soap_server_help($path, $arg) {
+  switch ($path) {
+    case 'admin/build/services/settings/soap':
+      return '<p>'. t('The following are the configuration options for the SOAP Server.') .'</p>';    
+  }
+}
+
+/**
+ * Implementation of hook_menu()
+ */ 
+function soap_server_menu() {
+  $items['admin/build/services/settings/soap'] = array(
+    'title'            => 'SOAP Server',
+    'access arguments' => array('administer services'),
+    'page callback'    => 'drupal_get_form',
+    'page arguments'   => array('soap_server_admin_settings'),
+    'description'      => 'Configure the SOAP server.',
+    'type'             => MENU_LOCAL_TASK,
+  );
+
+  return $items;
+}
+
+/**
+ * Administration settings for the SOAP server.
+ */
+function soap_server_admin_settings() {
+  $form = array();
+  
+  // Check to see if the SOAP Server is available.
+  $status = t('NuSOAP was not found');
+  if (@include_once(realpath(soap_server_nusoap_path()))) {
+    $nusoap = new nusoap_base();
+    $status = t('Version %version found', array('%version' => $nusoap->version));
+  }
+  
+  // Create the settings form to input the NuSOAP path.
+  $form['soap_server_nusoap_path'] = array(
+    '#type' => 'textfield',
+    '#title' => t('NuSOAP Path'),
+    '#description' => t('The location where <a href="@nusoap">NuSOAP</a> is installed.  This should be a relative path to <em>nusoap.php</em>. !status.', array('@NuSOAP' => 'http://sourceforge.net/projects/nusoap/', '!status' => $status)),
+    '#default_value' => soap_server_nusoap_path(),
+    '#required' => TRUE
+  );
+  
+  // Create the settings form.
+  return system_settings_form($form);
+}
+
+/**
+ * Retrieve the path where NuSOAP is installed
+ */
+function soap_server_nusoap_path() {
+  return variable_get('soap_server_nusoap_path', drupal_get_path('module', 'soap_server') .'/nusoap/lib/nusoap.php');
+}
+
+/**
+ * Implementation of hook_server_info()
+ */
+function soap_server_server_info() {
+  return array(
+    $dashPrefix.'name' => 'SOAP',
+    $dashPrefix.'path' => 'soap'
+  );
+}
+
+/**
+ * Implementation of hook_server()
+ */
+function soap_server_server() {
+  // Load soap library
+  if (@include_once(realpath(soap_server_nusoap_path()))) {
+    // Launch the server
+    return soap_server();
+  }
+  else {
+    // Gracefully tell the user NuSOAP isn't installed
+    drupal_set_message(t('The <em>SOAP Server</em> requires proper installation of <a href="@nusoap" target="_blank">NuSOAP</a>. Please see the <a href="@soapserver">SOAP Server settings</a> for more information.', array('@nusoap' => 'http://sourceforge.net/projects/nusoap/', '@soapserver' => url('admin/build/services/settings/soap'))), 'error');
+    drupal_goto();
+  }
+}
+
+/**
+ * Creates the SOAP server and manages its call
+ */ 
+function soap_server() {
+  // Get the global var with post data..
+  global $HTTP_RAW_POST_DATA;
+  global $soap_server;
+  
+  // Construct URL.
+  if (isset($_SERVER)) {
+    $server_name = $_SERVER['SERVER_NAME'];
+    $https = isset($_SERVER['HTTPS']) ? $_SERVER['HTTPS'] : (isset($HTTP_SERVER_VARS['HTTPS']) ? $HTTP_SERVER_VARS['HTTPS'] : 'off');
+  }
+  elseif (isset($HTTP_SERVER_VARS)) {
+    $server_name = $HTTP_SERVER_VARS['SERVER_NAME'];
+    $https = isset($HTTP_SERVER_VARS['HTTPS']) ? $HTTP_SERVER_VARS['HTTPS'] : 'off';
+  }
+
+  // Check if we access site using ssl or not.
+  if ($https == '1' || $https == 'on') {
+    $scheme = 'https://';
+  } 
+  else {
+    $scheme = 'http://';
+  }
+
+  // Get q parameter.
+  $q = $_GET['q'] .'/';
+  
+  // URL
+  $name_space = $scheme . $server_name . base_path() . $q;
+  
+  // Create server instance
+  $soap_server = new soap_server();
+
+  // set encoding to UTF-8
+  $soap_server->soap_defencoding = 'UTF-8';
+  $soap_server->decode_utf8 = false;
+
+  // Initialize WSDL support
+  $soap_server->configureWSDL('DrupalSoap', $name_space, $name_space);
+  $soap_server->wsdl->schemaTargetNamespace = $name_space;
+
+
+/**
+ * Added DAE specific code.
+ * This code connects to the DAE Database and retrieves all specific type names that serve as algorithm
+ * input and output. The code then proceeds to declaring these types to the SOAP server.
+ * 
+ * @TODO This specific DAE code doesn't feel right. It would be much nicer if each service, when published
+ * through the Drupal framework (i.e. when it's module gets activated) registers its input and output types
+ * to the server.
+ */ 
+
+$db = getDAEDatabase(); 
+
+/*
+ * The following query retrieves:
+ *      data.id and data.name from all data that is either input or output of an algorithm (any algorithm)
+ *  and the associated datatype.
+ *  
+ * @BUG This query assumes there is only one datatype associated to a diven data entry. Nothing in the 
+ *          data model enforces this.
+ * @TODO We currently do not know what actual 'syntactic' type the datatype corresponds to (int, string ...)
+ * 
+ */
+$query = "select 
+            distinct(datatype.id), datatype.name as tname, datatype.data_item_type as itemtype
+          from 
+            data, type_of, datatype 
+          where 
+                (
+                        data.id in 
+                                (select ai.data_id from algorithm_input ai) 
+                 or 
+                        data.id in 
+                                (select ao.data_id from algorithm_output ao)
+                ) 
+                and 
+                        data.id = type_of.data_id 
+                and 
+                        datatype.id = type_of.datatype_id
+          order by DATATYPE.ID";
+
+$dataTypes = $db->q($query,array());
+
+while($row = $db->fetch_array($dataTypes)) {
+	declareDAEType($soap_server,$row['TNAME'],$row['ID'],$row['ITEMTYPE']);
+}
+
+$algorithms = $db->q('select ID, NAME, VERSION from ALGORITHM where STATUS = 2',array());
+
+$dashPrefix = $dashPrefix.'';
+
+while($row = $db->fetch_array($algorithms)) {
+    
+    $algoName = $row['NAME'];
+    $algoString = $row['NAME'].'_'.$row['VERSION'];
+    $algoId = $row['ID'];
+    
+    $SOAPInputType = retrieveAlgorithmSOAPInputTypes($algoId,'','xsd:');
+    $typeName = $algoString.'_Input_'.$algoId;
+    $soap_server->wsdl->addComplexType(
+        'dae_'.$typeName,
+        'complexType',
+        'struct',
+        'all',
+        '',
+        $SOAPInputType
+    );    
+    
+    $SOAPOutputType = retrieveAlgorithmSOAPOutputTypes($algoId,'');
+    /* Obsolete ... use soap_fault
+    $SOAPOutputType['error_message'] = array('name'=>'error_message', 'type'=>'xsd:string');
+    $SOAPOutputType['error_code'] = array('name'=>'error_code', 'type'=>'xsd:integer');
+    */
+    
+    $typeName = $algoString.'_Output_'.$algoId;
+    
+    $soap_server->wsdl->addComplexType(
+        'dae_'.$typeName,
+        'complexType',
+        'struct',
+        'all',
+        '',
+        $SOAPOutputType
+    );
+}
+
+/*
+ * Added by Bart Lamiroy
+ * Defining array types for allowing dataset related types
+ */
+$soap_server->wsdl->addComplexType(
+                'DAE_dataset', 'complexType', 'struct', 'all', '',
+                array(
+                        'page_images' => array('name' => 'id', 'type' => 'tns:StringArray'),
+                        'files' => array('name' => 'name', 'type' => 'tns:StringArray'),
+                        'page_elements' => array('name' => 'description', 'type' => 'tns:StringArray'),
+                        'page_element_property_values' => array('name' => 'copyright_list', 'type' => 'tns:StringArray'),
+                        'datasets' => array('name' => 'type_list', 'type' => 'tns:DAE_DataSetArray'),
+                )
+        );
+
+$soap_server->wsdl->addComplexType(
+	'DAE_DataSetArray', 'complexType', 'array', '', 'SOAP-ENC:Array', array(),
+    array(
+           array(
+                 'ref' => 'SOAP-ENC:arrayType',
+                 'wsdl:arrayType' => 'tns:DAE_dataset[]'
+                )
+         ),
+    'tns:DAE_dataset'
+);
+
+        // added by xiz307
+        
+        // repository service
+        
+        $soap_server->wsdl->addComplexType(
+                'Row', 'complexType', 'array', '', 'SOAP-ENC:Array', array(),
+                array(
+                        array(
+                                'ref' => 'SOAP-ENC:arrayType',
+                                'wsdl:arrayType' => 'xsd:string[]'
+                        )
+                ), 
+                'xsd:string'
+        );
+        
+        $soap_server->wsdl->addComplexType(
+                'ResultSet', 'complexType', 'array', '', 'SOAP-ENC:Array', array(),
+                array(
+                        array(
+                                'ref' => 'SOAP-ENC:arrayType',
+                                'wsdl:arrayType' => 'tns:Row[]'
+                        )
+                ), 
+                'tns:Row'
+        );
+        
+        $soap_server->wsdl->addComplexType(
+                'ResultTable', 'complexType', 'struct', 'all', '',
+                array(
+                        'metadata' => array('name' => 'metadata', 'type' => 'tns:Row'),
+                        'result_set' => array('name' => 'result_set', 'type' => 'tns:ResultSet'),
+                )
+        );
+        
+        $soap_server->wsdl->addComplexType(
+                'SQLResult', 'complexType', 'struct', 'choice', '',
+                array(
+                        'error_message' => array('name' => 'error_message', 'type' => 'xsd:string'),
+                        'result_table' => array('name' => 'result_table', 'type' => 'tns:ResultTable'),
+                )
+        );
+        
+        // dataitem types start here
+        
+        // StringArray
+        $soap_server->wsdl->addComplexType(
+                'StringArray', 'complexType', 'array', '', 'SOAP-ENC:Array', array(),
+                array(
+                        array(
+                                'ref' => 'SOAP-ENC:arrayType',
+                                'wsdl:arrayType' => 'xsd:string[]'
+                        )
+        ), 'xsd:string'
+        );
+        
+        // IntegerArray
+        $soap_server->wsdl->addComplexType(
+                'IntegerArray', 'complexType', 'array', '', 'SOAP-ENC:Array', array(),
+                array(
+                        array(
+                                'ref' => 'SOAP-ENC:arrayType',
+                                'wsdl:arrayType' => 'xsd:integer[]'
+                        )
+        ), 'xsd:integer'
+        );
+
+        // FileInfo
+        $soap_server->wsdl->addComplexType(
+                'FileInfo', 'complexType', 'struct', 'all', '',
+                array(
+                        'id' => array('name' => 'id', 'type' => 'xsd:integer'),
+                        'name' => array('name' => 'name', 'type' => 'xsd:string'),
+                        'description' => array('name' => 'description', 'type' => 'xsd:string'),
+                        'copyright_list' => array('name' => 'copyright_list', 'type' => 'tns:IntegerArray'),
+                        'path' => array('name' => 'path', 'type' => 'xsd:string'),
+                )
+        );
+        
+        //DataSetInfo
+        $soap_server->wsdl->addComplexType(
+                'DataSetInfo', 'complexType', 'struct', 'all', '',
+                array(
+                        'id' => array('name' => 'id', 'type' => 'xsd:integer'),
+                        'name' => array('name' => 'name', 'type' => 'xsd:string'),
+                        'description' => array('name' => 'description', 'type' => 'xsd:string'),
+                        'copyright_list' => array('name' => 'copyright_list', 'type' => 'tns:IntegerArray'),
+                        'type_list' => array('name' => 'type_list', 'type' => 'tns:IntegerArray'),
+                        'file_list' => array('name' => 'file_list', 'type' => 'tns:IntegerArray'),
+                        'page_element_list' => array('name' => 'page_element_list', 'type' => 'tns:IntegerArray'),
+                        'page_image_list' => array('name' => 'page_image_list', 'type' => 'tns:IntegerArray'),
+                        'dataset_list' => array('name' => 'dataset_list', 'type' => 'tns:IntegerArray'),
+                        'property_value_list' => array('name' => 'property_value_list', 'type' => 'tns:IntegerArray'),
+                )
+        );
+        
+        //PageElementInfo
+        $soap_server->wsdl->addComplexType(
+                'PageElementInfo', 'complexType', 'struct', 'all', '',
+                array(
+                        'id' => array('name' => 'id', 'type' => 'xsd:integer'),
+                        'description' => array('name' => 'description', 'type' => 'xsd:string'),
+                        'copyright_list' => array('name' => 'copyright_list', 'type' => 'tns:IntegerArray'),
+                        'in_page_image' => array('name' => 'in_page_image', 'type' => 'xsd:integer'),
+                        'type_list' => array('name' => 'type_list', 'type' => 'tns:IntegerArray'),
+                        'property_value_list' => array('name' => 'property_value_list', 'type' => 'tns:IntegerArray'),
+                        // TODO boundary_list
+                )
+        );
+        
+        //PageImageInfo
+        $soap_server->wsdl->addComplexType(
+                'PageImageInfo', 'complexType', 'struct', 'all', '',
+                array(
+                        'id' => array('name' => 'id', 'type' => 'xsd:integer'),
+                        'description' => array('name' => 'description', 'type' => 'xsd:string'),
+                        'copyright_list' => array('name' => 'copyright_list', 'type' => 'tns:IntegerArray'),
+                        'vdpi' => array('name' => 'vdpi', 'type' => 'xsd:float'),
+                        'hdpi' => array('name' => 'hdpi', 'type' => 'xsd:float'),
+                        'skew' => array('name' => 'skew', 'type' => 'xsd:float'),
+                        'path' => array('name' => 'path', 'type' => 'xsd:string'),
+                        'width' => array('name' => 'width', 'type' => 'xsd:float'),
+                        'height' => array('name' => 'height', 'type' => 'xsd:float'),
+                        'type_list' => array('name' => 'type_list', 'type' => 'tns:IntegerArray'),
+                        'page_element_list' => array('name' => 'page_element_list', 'type' => 'tns:IntegerArray'),
+                )
+        );
+
+        //ValueInfo
+        $soap_server->wsdl->addComplexType(
+                'ValueInfo', 'complexType', 'struct', 'all', '',
+                array(
+                        'id' => array('name' => 'id', 'type' => 'xsd:integer'),
+                        'description' => array('name' => 'description', 'type' => 'xsd:string'),
+                        'copyright_list' => array('name' => 'copyright_list', 'type' => 'tns:IntegerArray'),
+                        'in_page_element' => array('name' => 'in_page_element', 'type' => 'xsd:integer'),
+                        'property' => array('name' => 'property', 'type' => 'xsd:integer'),
+                        'value' => array('name' => 'value', 'type' => 'xsd:string'),
+                )
+        );
+        
+        //UnknownDataItem
+        $soap_server->wsdl->addComplexType(
+                'UnknownDataItem', 'complexType', 'struct', 'all', '',
+                array(
+                        'id' => array('name' => 'id', 'type' => 'xsd:integer'),
+                        'description' => array('name' => 'description', 'type' => 'xsd:string'),
+                )
+        );
+        
+        //DataInfo
+        $soap_server->wsdl->addComplexType(
+                'DataInfo', 'complexType', 'struct', 'choice', '',
+                array(
+                        'file_info' => array('name' => 'file_info', 'type' => 'tns:FileInfo'),
+                        'dataset_info' => array('name' => 'dataset_info', 'type' => 'tns:DataSetInfo'),
+                        'page_element_info' => array('name' => 'page_element_info', 'type' => 'tns:PageElementInfo'),
+                        'page_image_info' => array('name' => 'page_image_info', 'type' => 'tns:PageImageInfo'),
+                        'property_value_info' => array('name' => 'property_value_info', 'type' => 'tns:ValueInfo'),
+                        'unknown_data_item' => array('name' => 'unknown_data_item', 'type' => 'tns:UnknownDataItem'),
+                )
+        );
+
+        //DataInfoArray
+        $soap_server->wsdl->addComplexType(
+                'DataInfoArray', 'complexType', 'array', '', 'SOAP-ENC:Array', array(),
+                array(
+                        array(
+                                'ref' => 'SOAP-ENC:arrayType',
+                                'wsdl:arrayType' => 'tns:DataInfo[]'
+                        )
+                ), 
+                'tns:DataInfo'
+        );
+  
+        // dataitem types end here 
+
+  //loop exposed services and register to the soap server
+  foreach (services_get_all() as $method) {
+    // Get arguments for the service
+    $args = array();
+    
+    // TODO: deal with args when they are array..
+    foreach ($method[$dashPrefix.'args'] as $arg) {
+          //added for DAE
+          if(substr($arg[$dashPrefix.'type'],0,4)=='dae_')
+              $args[$arg[$dashPrefix.'name']] = 'tns:'. $arg[$dashPrefix.'type'];
+          elseif ($arg[$dashPrefix.'type']=='IntegerArray'){
+              $args[$arg[$dashPrefix.'name']] = 'tns:'. $arg[$dashPrefix.'type'];
+          }elseif ($arg[$dashPrefix.'type']=='StringArray'){
+              $args[$arg[$dashPrefix.'name']] = 'tns:'. $arg[$dashPrefix.'type'];
+          }
+          else // Let SOAP server deal with inputs of type: object 
+              $args[$arg[$dashPrefix.'name']] = 'xsd:'. $arg[$dashPrefix.'type'];
+    }
+         
+    // Set return value for the service
+    $return = array();
+    if ($method[$dashPrefix.'return']) {
+      // Don't let a struct be declared as return parameter, because nusoap will not
+      // Send back anything.
+      $return['return'] = 'xsd:'. $method[$dashPrefix.'return'];
+      if ($method[$dashPrefix.'return'] == 'struct' || $method[$dashPrefix.'return'] == 'array') {
+        $return['return'] = 'xsd:Array';
+      }
+          
+      // added for DAE
+      if ($method[$dashPrefix.'return'] == 'array') {
+        $return['return'] = 'tns:DataInfoArray';
+      }
+      if ($method[$dashPrefix.'return'] == 'DataInfoArray') {
+        $return['return'] = 'tns:DataInfoArray';
+      }
+      if ($method[$dashPrefix.'return'] == 'DataInfo') {
+        $return['return'] = 'tns:DataInfo';
+      }
+      if ($method[$dashPrefix.'return'] == 'IntegerArray') {
+        $return['return'] = 'tns:IntegerArray';
+      }
+      
+      if ($method[$dashPrefix.'return'] == 'SQLResult') {
+        $return['return'] = 'tns:SQLResult';
+      }
+      
+         //added for DAE
+      if(substr($method[$dashPrefix.'return'],0,4)=='dae_') {
+        $return['return'] = 'tns:'. $method[$dashPrefix.'return'];
+      }    
+          
+ 
+    }
+    
+    //  Register the service to the soap server
+    $soap_server->register(
+      $method[$dashPrefix.'method'],                 // method name
+      $args,                              // input parameters
+      $return,                            // output parameters
+      $name_space,                        // namespace
+      $name_space . $method[$dashPrefix.'method'],   // soapaction
+      'rpc',                              // style
+      'encoded',                          // use
+      $method[$dashPrefix.'help']                    // documentation
+    );
+
+  }
+  
+  // Replace exposed service with valid internall call. This is so ugly.. but the only way 
+  // to have a callback for impossible methods, like containing . in the method name.
+  $HTTP_RAW_POST_DATA = isset($HTTP_RAW_POST_DATA) ? $HTTP_RAW_POST_DATA : '';
+  
+  // We only modify the service if post is sent, meaning it's not a wsdl request.
+  if (strlen($HTTP_RAW_POST_DATA) > 0) {
+    // Now it's time to create the wrapper with the data of the service, so we can call it.
+    global $methodname;
+    foreach (services_get_all() as $method) {
+      if (strstr($HTTP_RAW_POST_DATA, $method[$dashPrefix.'method'])) {
+        $methodname = $method[$dashPrefix.'method'];
+        
+        // There's a soap violation here, but most of the clients ignore it.. we are changing the 
+        // methodname attribute, so the reply will be filled for another method's envelope. The 
+        // reply will always be enveloped for the soap_call_wrapper method.     	 	 
+        $HTTP_RAW_POST_DATA = str_replace($method[$dashPrefix.'method'], 'soap_call_wrapper', $HTTP_RAW_POST_DATA);
+            	
+        // Get arguments for the service
+        $args = array();
+        
+        //TODO: deal with args when they are array..
+        foreach ($method[$dashPrefix.'args'] as $arg) {
+          $args[$arg[$dashPrefix.'name']] = 'xsd:'. $arg[$dashPrefix.'type'];
+                  
+                  //added for DAE
+                  if(substr($arg[$dashPrefix.'type'],0,4)=='dae_')
+                      $args[$arg[$dashPrefix.'name']] = 'tns:'. $arg[$dashPrefix.'type'];
+        
+            
+          if($arg[$dashPrefix.'type']=='IntegerArray'){
+                $args[$arg[$dashPrefix.'name']] = 'tns:'. $arg[$dashPrefix.'type'];
+          }
+          if($arg[$dashPrefix.'type']=='StringArray'){
+                $args[$arg[$dashPrefix.'name']] = 'tns:'. $arg[$dashPrefix.'type'];
+          }
+          if($arg[$dashPrefix.'type']=='SQLResult'){
+                $args[$arg[$dashPrefix.'name']] = 'tns:'. $arg[$dashPrefix.'type'];
+          }
+        }
+            
+        // Set return value for the service
+        $return = array();
+        if ($method[$dashPrefix.'return']) {
+            
+          $return['return'] = 'xsd:'. $method[$dashPrefix.'return'];
+          if ($method[$dashPrefix.'return'] == 'struct' || $method[$dashPrefix.'return'] == 'array') {
+            $return['return'] = 'xsd:Array';
+          }
+      
+          //added for DAE         
+          if(substr($method[$dashPrefix.'return'],0,4)=='dae_') {
+             $return['return'] = 'tns:'.$method[$dashPrefix.'return'];
+          }
+          //added by xiz307
+          if ($method[$dashPrefix.'return'] == 'DataInfoArray') {
+                 $return['return'] = 'tns:DataInfoArray';
+        }
+          if ($method[$dashPrefix.'return'] == 'DataInfo') {
+             $return['return'] = 'tns:DataInfo';
+          }
+          if ($method[$dashPrefix.'return'] == 'IntegerArray') {
+             $return['return'] = 'tns:IntegerArray';
+          }
+           if ($method[$dashPrefix.'return'] == 'StringArray') {
+             $return['return'] = 'tns:StringArray';
+          }
+          if ($method[$dashPrefix.'return'] == 'SQLResult') {
+             $return['return'] = 'tns:SQLResult';
+          }        
+                  //added for DAE: set the output by looping each algorithm       
+                        for($j=0;$j<$count;$j++){
+                        if ($method[$dashPrefix.'return'] == 'complexOutput'.$algos[$j]) {
+                        $return['return'] = 'tns:complexOutput'.$algos[$j];
+        }
+        }
+                        
+        }
+                        
+        // Register the service to the soap server
+        $soap_server->register(
+          'soap_call_wrapper',                // method name
+          $args,                              // input parameters
+          $return,                            // output parameters
+          $name_space,                        // namespace
+          $name_space . 'soap_call_wrapper',  // soapaction
+          'rpc',                              // style
+          'encoded',                          // use
+          'Internal wrapper'                  // documentation
+        );
+      }
+    }
+  }
+
+  //Finally launch the service.
+  $soap_server->service($HTTP_RAW_POST_DATA); 
+}
+
+/**
+ * SOAP Server callback wrapper.
+ */
+function soap_call_wrapper($method) {
+  global $methodname;
+  
+  // for($i = 0 ; $i < func_num_args(); $i++) {
+  //   echo "Argument $i = ".func_get_arg($i)."<br />";
+  // }
+  $args = func_get_args();
+  $ret = services_method_call($methodname, $args);
+  
+  if (gettype($ret) != 'object') {
+    return $ret;
+  }
+
+  return $ret;
+  // I've found that input is not a problem as nusoap deals well with the arguments, even if they 
+  // are structs in the client side, but the return should be formated to the right type. To do 
+  // this we need to parse again the exposed services list.
+  /*
+  $oh = array();
+  foreach (get_object_vars($ret) as $name => $val){
+        $oh[] = array('title' => $name, 'value'=>$val);
+    //$oh[$name] = $val;
+  }
+
+  return (array)$oh;
+  
+  // Cast object to array type.
+  //  return print_r($ret,true);
+  $ret = (array) $ret;
+  return $ret;
+  */
+}
+

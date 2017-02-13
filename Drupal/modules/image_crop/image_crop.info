@@ -1,0 +1,5 @@
+;$Id:$
+name = "Image Crop"
+description = "This module creates a generic image cropping UI"
+core = 6.x
+package = DAE Modules

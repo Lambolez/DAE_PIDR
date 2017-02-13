@@ -1,0 +1,29 @@
+<?php
+function home_directory_schema() {
+  $schema['user_storage'] = array(
+    'description' => t('Table to store user upload space'),
+    'fields' => array(
+      'uid' => array(
+        'description' => t('The primary identifier for a node.'),
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE),
+      'used' => array(
+        'description' => t('The amount of bytes used'),
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0),
+      ),
+    'primary key' => array('uid'),
+    );
+  return $schema;
+}
+
+function home_directory_install() {
+  drupal_install_schema('home_directory');
+}
+
+function home_directory_uninstall() {
+  drupal_uninstall_schema('home_directory');
+}

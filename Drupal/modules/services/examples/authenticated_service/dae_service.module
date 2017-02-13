@@ -1,0 +1,49 @@
+<?php
+
+/**
+ * The DAE algorithm services.
+ */
+ 
+
+/**
+ * Implementation of hook_perm().
+ */
+function dae_service_perm() {
+  return array('access ocrad');
+}
+
+/**
+ * Implementation of hook_service().
+ */
+function dae_service_service() {
+
+  return array(
+    // file.get
+    array(
+      '#method'           => 'dae.ocrad', // service name
+      '#callback'         => 'dae_service_ocrad', // service operation
+	  '#access callback'  => 'dae_service_ocrad_access',
+      '#file'             => array('file' => 'inc', 'module' => 'dae_service'),
+      '#args'             => array(
+        array(
+          '#name'           => 'name',
+          '#type'           => 'complexInput166',  // The type of input, which should declared in the WSDL file.
+          '#description'    => 'algorithm input',
+        ),
+		array(
+          '#name'           => 'username',
+          '#type'           => 'string',
+          '#description'    => t('A valid username.'),
+        ),
+        array(
+          '#name'           => 'password',
+          '#type'           => 'string',
+          '#description'    => t('A valid password.'),
+        ),
+      ),
+      '#return'           => 'complexOutput166', // The type of output, which should declared in the WSDL file.
+      '#help'             => t('The DAE ocrad service.')
+    ),
+
+  );
+}

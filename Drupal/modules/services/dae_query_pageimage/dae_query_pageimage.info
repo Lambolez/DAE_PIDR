@@ -1,0 +1,11 @@
+; $Id:$
+name = DAE Query Page Image Service
+description = Provides a query service to page images.
+package = DAE Services
+dependencies[] = services
+dependencies[] = soap_server
+dependencies[]  = daedatabase
+core = 6.x
+version = "6.x-2.2"
+core = "6.x"
+project = "DAE services"

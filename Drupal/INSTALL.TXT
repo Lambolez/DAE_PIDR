@@ -1,0 +1,1 @@
+To install, all contents of this directory should be copied in the sites/default subirectory of a running Drupal installation.

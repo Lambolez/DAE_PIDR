@@ -1,0 +1,54 @@
+<?php
+// $Id: $
+
+/**
+ * @file
+ *  Link commenting functionality to services module.
+ */
+
+
+/**
+ * This is the service authorization handler.
+ * 
+ * Currently this is only a stub.
+ * 
+ * \todo Set up complete authentification handling for Web Services
+ * 
+ */
+function dae_service_dataitem_auth() {
+    //return (user_access('download data'));
+    return true;
+}
+
+/**
+ * Implementation of hook_perm().
+ */
+function dae_service_dataitem_perm() {
+    return array('download data');
+}
+/**
+ * Implementation of hook_service().
+ */
+function dae_service_dataitem_service() {
+  return array(
+
+    // dataitem.descript
+    array(
+      '#method'   => 'DAE Data.DataItem Descript',
+      '#callback' => 'dataitem_service_descript',
+      '#access callback'  => 'dae_service_dataitem_auth',
+ //     '#access arguments'  => array('get descriptions of data items'),
+      '#file'     => array('file' => 'inc', 'module' => 'dae_service_dataitem'),
+      '#args'     => array(
+        array(
+          '#name'         => 'idList',
+          '#type'         => 'IntegerArray',
+          '#description'  => t('the ID list of the dataitems'),
+        ),
+      ),
+      '#return' => 'DataInfoArray',
+      '#help' => t('Retrieve full description of data_items'),
+    ),
+
+  );
+}

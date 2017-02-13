@@ -1,0 +1,7 @@
+<?php
+
+global $uploads, $runs, $user, $spool;
+
+$uploads = variable_get('home_directory_userdata', '') . $user->uid . "/uploads";
+$runs = variable_get('home_directory_userdata', '') . $user->uid . "/runs";
+$spool = variable_get('home_directory_spool', '') . $user->uid;
